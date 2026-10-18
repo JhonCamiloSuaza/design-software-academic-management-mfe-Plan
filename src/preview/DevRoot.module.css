@@ -1,0 +1,23 @@
+/* Layout de la vista previa local. Sin margen del body para que no haya scroll si el contenido es corto. */
+:global(html),
+:global(body) {
+  margin: 0;
+  padding: 0;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width, 264px) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--color-surface-muted, #f2f4f7);
+}
+
+.main {
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

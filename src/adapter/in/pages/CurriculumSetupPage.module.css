@@ -1,0 +1,11 @@
+/* Pantalla de parametrización de currículo (HU-ACAD-18). Mismo contenedor que ProgramsPage (HU-ACAD-17). */
+
+.root { align-content: start; display: grid; gap: var(--space-5, 24px); padding: var(--space-5, 24px); background: var(--color-surface-muted, #f2f4f7); min-height: 100%; color: var(--color-text, #101828); font-family: var(--font-family-base, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif); font-size: var(--font-size-md, 16px); line-height: var(--line-height-normal, 1.5); }
+.pageHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4, 16px); flex-wrap: wrap; }
+.pageHeader h1 { margin: 0 0 var(--space-1, 4px); font-size: var(--font-size-2xl, 24px); line-height: var(--line-height-tight, 1.25); }
+.pageHeader p { margin: 0; color: var(--color-text-muted, #475467); font-size: var(--font-size-sm, 14px); }
+.panel { align-content: start; background: var(--color-surface, #fff); border: 1px solid var(--color-border, #eaecf0); border-radius: var(--radius-md, 10px); padding: var(--space-5, 24px); box-shadow: var(--shadow-sm, 0 1px 2px rgba(16, 24, 40, .06)); display: grid; gap: var(--space-4, 16px); }
+
+@media (max-width: 767px) {
+  .root { padding: var(--space-4, 16px); }
+}

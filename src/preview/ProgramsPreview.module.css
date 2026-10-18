@@ -1,0 +1,95 @@
+/* Controles de la vista previa, con la paleta del prototipo (design-tokens.md). */
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3, 12px) var(--space-5, 24px);
+  padding: var(--space-3, 12px) var(--space-5, 24px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #101828);
+  border-bottom: 1px solid var(--color-border, #eaecf0);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16, 24, 40, .06));
+  font-family: var(--font-family-base, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  font-size: var(--font-size-sm, 14px);
+}
+
+.title {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.title strong {
+  color: var(--color-brand, #007832);
+  font-size: var(--font-size-md, 16px);
+}
+
+.title span {
+  color: var(--color-text-muted, #475467);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1, 4px);
+}
+
+.field span {
+  color: var(--color-text-muted, #475467);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.field select {
+  min-height: 36px;
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border: 1px solid #667085;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #101828);
+  font: inherit;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  min-height: 36px;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-brand, #007832);
+}
+
+.reset {
+  min-height: 36px;
+  padding: var(--space-1, 4px) var(--space-4, 16px);
+  border: 1px solid #667085;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text, #101828);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--font-weight-bold, 700);
+}
+
+.reset:hover {
+  border-color: var(--color-brand, #007832);
+  color: var(--color-brand, #007832);
+}
+
+.bar select:focus-visible,
+.bar input:focus-visible,
+.bar button:focus-visible {
+  outline: 3px solid var(--color-brand, #007832);
+  outline-offset: 2px;
+}

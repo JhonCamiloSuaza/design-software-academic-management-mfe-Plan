@@ -1,0 +1,127 @@
+/* Menu lateral de las vistas locales. Copia el sidebar del prototipo (mockups/app/assets/app.css)
+   con los valores de design-tokens.md; var(--token, valor) toma el token compartido si existe. */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow: auto;
+  padding: var(--space-5, 24px) var(--space-3, 12px);
+  background: var(--color-surface, #fff);
+  border-right: 1px solid var(--color-border, #eaecf0);
+  font-family: var(--font-family-base, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  min-height: 44px;
+  margin: 0 var(--space-3, 12px) var(--space-5, 24px);
+}
+
+.brandMark {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--color-brand, #007832);
+  color: #fff;
+  font-size: 12px;
+  font-weight: var(--font-weight-bold, 700);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16, 24, 40, .06));
+}
+
+.brandCopy {
+  display: grid;
+  min-width: 0;
+}
+
+.brandCopy strong {
+  color: var(--color-text, #101828);
+  font-size: 15px;
+}
+
+.brandCopy span {
+  color: var(--color-text-muted, #475467);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.label {
+  margin: 0 var(--space-3, 12px) var(--space-2, 8px);
+  color: #667085;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold, 700);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: grid;
+  gap: var(--space-1, 4px);
+}
+
+.link {
+  position: relative;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 10px var(--space-3, 12px);
+  border-radius: var(--radius-sm, 6px);
+  color: #344054;
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-bold, 700);
+  text-decoration: none;
+}
+
+.link:hover {
+  background: var(--color-surface-muted, #f2f4f7);
+}
+
+.link[aria-current="page"] {
+  color: var(--color-brand, #007832);
+  background: var(--color-brand-soft, #ecf7f0);
+}
+
+.link[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 99px;
+  background: var(--color-brand, #007832);
+}
+
+.link:focus-visible {
+  outline: 3px solid var(--color-brand, #007832);
+  outline-offset: -3px;
+}
+
+.note {
+  margin: var(--space-5, 24px) var(--space-3, 12px) 0;
+  color: var(--color-text-muted, #475467);
+  font-size: var(--font-size-xs, 12px);
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    position: static;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border, #eaecf0);
+    padding: var(--space-4, 16px) var(--space-3, 12px);
+  }
+
+  .brand {
+    margin-bottom: var(--space-4, 16px);
+  }
+
+  .note {
+    margin-top: var(--space-3, 12px);
+  }
+}

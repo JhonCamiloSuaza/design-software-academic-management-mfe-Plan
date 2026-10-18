@@ -1,0 +1,3265 @@
+﻿
+===== src\adapter\in\components\ActiveFichasWidget.tsx =====
+import { useMemo } from 'react';
+
+import type { FichasApi } from '../../../application/ports/FichasApi.js';
+import { useFichas } from '../../../application/useFichas.js';
+import styles from '../../../App.module.css';
+import { HttpFichasApi } from '../../out/http/HttpFichasApi.js';
+
+interface Props {
+  api?: FichasApi;
+  apiBaseUrl?: string;
+  onViewAll?(): void;
+}
+
+export function ActiveFichasWidget({ api, apiBaseUrl = '/api/v1', onViewAll }: Props) {
+  const resolvedApi = useMemo(() => api ?? new HttpFichasApi(apiBaseUrl), [api, apiBaseUrl]);
+  const { pagination, isLoading, error, retry } = useFichas(resolvedApi, {
+    activeOnly: true,
+    page: 1,
+    pageSize: 1,
+  });
+
+  return (
+    <section className={styles.widget} aria-label="Fichas activas">
+      <div className={styles.widgetTitle}>
+        <svg aria-hidden="true" viewBox="0 0 16 16">
+          <path d="M2 14V9m4 5V5m4 9V7m4 7V2" />
+        </svg>
+        <span>Fichas activas</span>
+      </div>
+      {isLoading && <strong aria-label="Cargando fichas activas">—</strong>}
+      {error && <button type="button" onClick={retry}>Reintentar</button>}
+      {!isLoading && !error && <strong>{pagination?.total_items ?? 0}</strong>}
+      {onViewAll && <button type="button" className={styles.linkButton} onClick={onViewAll}>Ver todas</button>}
+    </section>
+  );
+}
+
+export default ActiveFichasWidget;
+
+
+===== src\adapter\in\components\CompetencyFormModal.tsx =====
+import { type FormEvent, useState } from 'react';
+
+import {
+  EMPTY_COMPETENCY_FORM,
+  validateCompetencyForm,
+  type CompetencyFormErrors,
+  type CompetencyFormValues,
+} from '../../../domain/trainingProgram.js';
+import styles from './components.module.css';
+
+interface Props {
+  isSaving: boolean;
+  error: Error | null;
+  onSubmit(values: CompetencyFormValues): void;
+  onClose(): void;
+}
+
+// E3: crear competencia dentro de un programa.
+export function CompetencyFormModal({ isSaving, error, onSubmit, onClose }: Props) {
+  const [values, setValues] = useState<CompetencyFormValues>(EMPTY_COMPETENCY_FORM);
+  const [errors, setErrors] = useState<CompetencyFormErrors>({});
+
+  const set = (key: keyof CompetencyFormValues, value: string) =>
+    setValues((current) => ({ ...current, [key]: value }));
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    const found = validateCompetencyForm(values);
+    setErrors(found);
+    if (Object.keys(found).length === 0) onSubmit(values);
+  };
+
+  return (
+    <div className={styles.backdrop} role="presentation" onMouseDown={onClose}>
+      <div
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="competency-form-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="competency-form-title">Nueva competencia</h2>
+
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          <label className={styles.field}>
+            <span>Código SENA</span>
+            <input value={values.sena_code} onChange={(event) => set('sena_code', event.target.value)} />
+            {errors.sena_code && <span className={styles.fieldError}>{errors.sena_code}</span>}
+          </label>
+
+          <label className={styles.field}>
+            <span>Nombre</span>
+            <input value={values.name} onChange={(event) => set('name', event.target.value)} />
+            {errors.name && <span className={styles.fieldError}>{errors.name}</span>}
+          </label>
+
+          <label className={styles.field}>
+            <span>Horas</span>
+            <input inputMode="numeric" value={values.hours} onChange={(event) => set('hours', event.target.value)} />
+            {errors.hours && <span className={styles.fieldError}>{errors.hours}</span>}
+          </label>
+
+          {error && <div className={styles.errorBox} role="alert">{error.message}</div>}
+
+          <div className={styles.actions}>
+            <button className={styles.secondaryButton} type="button" onClick={onClose}>Cancelar</button>
+            <button className={styles.primaryButton} type="submit" disabled={isSaving}>
+              {isSaving ? 'Guardando…' : 'Guardar competencia'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+===== src\adapter\in\components\components.module.css =====
+.badge { display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
+.badge-success { background: #e6f4e0; color: #1f6b00; }
+.badge-neutral { background: #eceff1; color: #4a545b; }
+
+.primaryButton, .secondaryButton, .dangerButton { padding: .5rem .9rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font: inherit; }
+.primaryButton { background: #39a900; color: #fff; }
+.secondaryButton { background: #fff; color: #1c2b33; border-color: #c5ced3; }
+.dangerButton { background: #fff; color: #b3261e; border-color: #e3b5b2; }
+.primaryButton:disabled, .secondaryButton:disabled, .dangerButton:disabled { opacity: .5; cursor: not-allowed; }
+.linkButton { background: none; border: 0; padding: 0; color: #1f6b00; font: inherit; font-weight: 600; text-align: left; cursor: pointer; text-decoration: underline; }
+
+.tableWrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.table th { text-align: left; padding: .6rem .5rem; border-bottom: 2px solid #e1e6e9; color: #5b6b73; font-size: .8rem; text-transform: uppercase; }
+.table td { padding: .6rem .5rem; border-bottom: 1px solid #edf0f2; vertical-align: middle; }
+.table tr[data-selected="true"] { background: #f1f9ec; }
+.rowActions { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+.backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; z-index: 50; padding: 1rem; }
+.dialog { background: #fff; border-radius: 12px; width: min(520px, 100%); max-height: 90vh; overflow: auto; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); }
+.dialog h2 { margin: 0 0 .5rem; }
+.form { display: grid; gap: 1rem; margin-top: .75rem; }
+.field { display: grid; gap: .3rem; font-weight: 600; font-size: .9rem; }
+.field input, .field select { padding: .5rem .6rem; border: 1px solid #c5ced3; border-radius: 8px; font: inherit; font-weight: 400; background: #fff; }
+.fieldError { color: #b3261e; font-size: .82rem; font-weight: 400; }
+.actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .5rem; }
+.errorBox { background: #fdecea; color: #7a1a14; border-radius: 8px; padding: .75rem 1rem; }
+.errorBox p { margin: .25rem 0 .5rem; }
+.hint { background: #eef6fb; color: #1d4e6b; border-radius: 8px; padding: .6rem .8rem; margin: 0; font-size: .9rem; }
+.muted { color: #5b6b73; margin: 0; font-size: .88rem; }
+
+.tree { background: #fff; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); display: grid; gap: 1rem; }
+.treeHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.treeHeader h2 { margin: 0 0 .2rem; font-size: 1.15rem; }
+.competencyList { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.competencyItem { border: 1px solid #e1e6e9; border-radius: 10px; overflow: hidden; }
+.competencyToggle { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .7rem .9rem; background: #fafbfc; border: 0; font: inherit; text-align: left; cursor: pointer; }
+.competencyName { flex: 1; font-weight: 600; }
+.code { font-family: ui-monospace, monospace; font-size: .85rem; color: #1f6b00; }
+.outcomesPanel { padding: .75rem 1rem 1rem 2.5rem; border-top: 1px solid #edf0f2; }
+.outcomes { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.outcomeItem { display: flex; gap: .75rem; align-items: baseline; flex-wrap: wrap; }
+
+===== src\adapter\in\components\ConfirmDeactivateDialog.tsx =====
+import type { TrainingProgram } from '../../../domain/trainingProgram.js';
+import styles from './components.module.css';
+
+interface Props {
+  program: TrainingProgram;
+  isSaving: boolean;
+  error: Error | null;
+  onConfirm(): void;
+  onCancel(): void;
+}
+
+// E5: confirmación de la baja lógica (is_active = false).
+export function ConfirmDeactivateDialog({ program, isSaving, error, onConfirm, onCancel }: Props) {
+  return (
+    <div className={styles.backdrop} role="presentation" onMouseDown={onCancel}>
+      <div
+        className={styles.dialog}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="deactivate-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="deactivate-title">Dar de baja el programa</h2>
+        <p>
+          «{program.name}» quedará inactivo y dejará de aparecer en los selectores de otras pantallas.
+          El registro y su historial se conservan.
+        </p>
+
+        {error && <div className={styles.errorBox} role="alert">{error.message}</div>}
+
+        <div className={styles.actions}>
+          <button className={styles.secondaryButton} type="button" onClick={onCancel}>Cancelar</button>
+          <button className={styles.dangerButton} type="button" disabled={isSaving} onClick={onConfirm}>
+            {isSaving ? 'Procesando…' : 'Confirmar baja'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+===== src\adapter\in\components\CurriculumTree.tsx =====
+import { useState } from 'react';
+
+import type { TrainingProgramsApi } from '../../../application/ports/TrainingProgramsApi.js';
+import { useLearningOutcomes } from '../../../application/useLearningOutcomes.js';
+import { useProgramCompetencies } from '../../../application/useProgramCompetencies.js';
+import { toCompetencyCreate, type TrainingProgram } from '../../../domain/trainingProgram.js';
+import { CompetencyFormModal } from './CompetencyFormModal.js';
+import styles from './components.module.css';
+import { ProgramActiveBadge } from './ProgramActiveBadge.js';
+
+interface OutcomesProps {
+  api: TrainingProgramsApi;
+  competencyId: string;
+}
+
+// E4: se monta solo al expandir la competencia, así los RAP se piden bajo demanda.
+function LearningOutcomesList({ api, competencyId }: OutcomesProps) {
+  const outcomes = useLearningOutcomes(api, competencyId);
+
+  if (outcomes.isLoading) return <p className={styles.muted}>Cargando resultados de aprendizaje…</p>;
+
+  if (outcomes.error) {
+    return (
+      <div className={styles.errorBox} role="alert">
+        <p>{outcomes.error.message}</p>
+        <button className={styles.secondaryButton} type="button" onClick={outcomes.retry}>Reintentar</button>
+      </div>
+    );
+  }
+
+  if (outcomes.data.length === 0) {
+    return <p className={styles.muted}>Esta competencia no tiene resultados de aprendizaje.</p>;
+  }
+
+  return (
+    <ul className={styles.outcomes} aria-label="Resultados de aprendizaje">
+      {outcomes.data.map((outcome) => (
+        <li key={outcome.id} className={styles.outcomeItem}>
+          <strong>{outcome.code}</strong>
+          <span>{outcome.description}</span>
+          {!outcome.is_active && <ProgramActiveBadge isActive={false} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface Props {
+  api: TrainingProgramsApi;
+  program: TrainingProgram;
+  canManage: boolean;
+}
+
+// E3 + E4: programa > competencias > RAP.
+export function CurriculumTree({ api, program, canManage }: Props) {
+  const competencies = useProgramCompetencies(api, program.id);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [isCreating, setIsCreating] = useState(false);
+
+  const toggle = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const openCreate = () => {
+    competencies.clearActionError();
+    setIsCreating(true);
+  };
+
+  const total = competencies.pagination?.total_items ?? competencies.data.length;
+
+  return (
+    <section className={styles.tree} aria-label="Currículo del programa">
+      <div className={styles.treeHeader}>
+        <div>
+          <h2>Currículo de {program.name}</h2>
+          <p className={styles.muted}>Versión vigente {program.version} · {total} competencias</p>
+        </div>
+        {canManage && (
+          <button className={styles.primaryButton} type="button" disabled={!program.is_active} onClick={openCreate}>
+            Nueva competencia
+          </button>
+        )}
+      </div>
+
+      {competencies.isLoading && <p className={styles.muted}>Cargando competencias…</p>}
+
+      {competencies.error && (
+        <div className={styles.errorBox} role="alert">
+          <p>{competencies.error.message}</p>
+          <button className={styles.secondaryButton} type="button" onClick={competencies.retry}>Reintentar</button>
+        </div>
+      )}
+
+      {!competencies.isLoading && !competencies.error && competencies.data.length === 0 && (
+        <p className={styles.muted}>Este programa aún no tiene competencias.</p>
+      )}
+
+      {competencies.data.length > 0 && (
+        <ul className={styles.competencyList}>
+          {competencies.data.map((competency) => {
+            const isOpen = expanded.has(competency.id);
+            const panelId = `outcomes-${competency.id}`;
+
+            return (
+              <li key={competency.id} className={styles.competencyItem}>
+                <button
+                  className={styles.competencyToggle}
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => toggle(competency.id)}
+                >
+                  <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                  <span className={styles.code}>{competency.sena_code}</span>
+                  <span className={styles.competencyName}>{competency.name}</span>
+                  <span className={styles.muted}>{competency.hours} h</span>
+                  {!competency.is_active && <ProgramActiveBadge isActive={false} />}
+                </button>
+                {isOpen && (
+                  <div id={panelId} className={styles.outcomesPanel}>
+                    <LearningOutcomesList api={api} competencyId={competency.id} />
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {competencies.pagination && competencies.pagination.total_pages > 1 && (
+        <p className={styles.muted}>Se muestran las primeras {competencies.data.length} competencias.</p>
+      )}
+
+      {isCreating && (
+        <CompetencyFormModal
+          isSaving={competencies.isSaving}
+          error={competencies.actionError}
+          onClose={() => setIsCreating(false)}
+          onSubmit={async (values) => {
+            if (await competencies.create(toCompetencyCreate(values))) setIsCreating(false);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+===== src\adapter\in\components\FichaDetailPanel.tsx =====
+import type { FichasApi } from '../../../application/ports/FichasApi.js';
+import { useFichaDetail } from '../../../application/useFichaDetail.js';
+import { MODALITY_LABELS, SHIFT_LABELS } from '../../../domain/ficha.js';
+import styles from '../../../App.module.css';
+import { FichaStatusBadge } from './FichaStatusBadge.js';
+
+interface Props {
+  api: FichasApi;
+  fichaId?: string;
+  onClose(): void;
+}
+
+const formatDate = (value?: string | null) =>
+  value
+    ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`))
+    : 'No aplica';
+
+const formatDateTime = (value: string) =>
+  new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+
+export function FichaDetailPanel({ api, fichaId, onClose }: Props) {
+  const detail = useFichaDetail(api, fichaId);
+
+  if (!fichaId) return null;
+
+  return (
+    <div className={styles.drawerBackdrop} role="presentation" onMouseDown={onClose}>
+      <aside
+        aria-label="Detalle de ficha"
+        aria-live="polite"
+        aria-modal="true"
+        className={styles.drawer}
+        onMouseDown={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className={styles.drawerHeader}>
+          <div>
+            <span className={styles.eyebrow}>Detalle de ficha</span>
+            <h2>{detail.data ? `Ficha ${detail.data.ficha_number}` : 'Cargando ficha…'}</h2>
+          </div>
+          <button className={styles.iconButton} type="button" onClick={onClose} aria-label="Cerrar detalle">×</button>
+        </div>
+
+        {detail.isLoading && <div className={styles.detailLoading}>Consultando información completa…</div>}
+        {detail.error && (
+          <div className={styles.errorState} role="alert">
+            <p>{detail.error.message}</p>
+            <button type="button" onClick={detail.retry}>Reintentar</button>
+          </div>
+        )}
+        {detail.data && (
+          <div className={styles.detailBody}>
+            <FichaStatusBadge status={detail.data.status} />
+            <section>
+              <h3>Programa</h3>
+              <dl className={styles.detailGrid}>
+                <div><dt>Programa</dt><dd>{detail.data.program_id}</dd></div>
+                <div><dt>Versión cursada</dt><dd>{detail.data.program_version}</dd></div>
+              </dl>
+            </section>
+            <section>
+              <h3>Datos de la ficha</h3>
+              <dl className={styles.detailGrid}>
+                <div><dt>Centro de formación</dt><dd>{detail.data.training_center_id}</dd></div>
+                <div><dt>Jornada</dt><dd>{SHIFT_LABELS[detail.data.training_shift]}</dd></div>
+                <div><dt>Modalidad</dt><dd>{MODALITY_LABELS[detail.data.training_modality]}</dd></div>
+                <div><dt>Cupo máximo</dt><dd>{detail.data.max_capacity} aprendices</dd></div>
+                <div><dt>Fecha de inicio</dt><dd>{formatDate(detail.data.start_date)}</dd></div>
+                <div><dt>Cierre esperado</dt><dd>{formatDate(detail.data.expected_end_date)}</dd></div>
+                <div><dt>Cierre real</dt><dd>{formatDate(detail.data.actual_end_date)}</dd></div>
+                <div><dt>Creada</dt><dd>{formatDateTime(detail.data.created_at)}</dd></div>
+                <div><dt>Última actualización</dt><dd>{formatDateTime(detail.data.updated_at)}</dd></div>
+              </dl>
+            </section>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+
+===== src\adapter\in\components\FichaStatusBadge.tsx =====
+import { getFichaStatusPresentation } from '../../../domain/ficha.js';
+import styles from '../../../App.module.css';
+
+interface Props {
+  status: string;
+}
+
+export function FichaStatusBadge({ status }: Props) {
+  const presentation = getFichaStatusPresentation(status);
+
+  return (
+    <span
+      className={`${styles.badge} ${styles[`badge-${presentation.tone}`]}`}
+      data-known-status={String(presentation.known)}
+      title={presentation.known ? undefined : `Valor recibido: ${status}`}
+    >
+      <span aria-hidden="true">{presentation.symbol}</span>
+      {presentation.label}
+    </span>
+  );
+}
+
+
+===== src\adapter\in\components\ProgramActiveBadge.tsx =====
+import { getActivePresentation } from '../../../domain/trainingProgram.js';
+import styles from './components.module.css';
+
+interface Props {
+  isActive: boolean;
+}
+
+// E5: Activo / Inactivo (la baja lógica nunca borra el registro).
+export function ProgramActiveBadge({ isActive }: Props) {
+  const presentation = getActivePresentation(isActive);
+
+  return (
+    <span className={`${styles.badge} ${styles[`badge-${presentation.tone}`]}`} data-active={String(isActive)}>
+      <span aria-hidden="true">{presentation.symbol}</span>
+      {presentation.label}
+    </span>
+  );
+}
+
+===== src\adapter\in\components\ProgramFormModal.tsx =====
+import { type FormEvent, useState } from 'react';
+
+import {
+  EMPTY_PROGRAM_FORM,
+  TRAINING_LEVELS,
+  TRAINING_LEVEL_LABELS,
+  programToFormValues,
+  validateProgramForm,
+  type KnowledgeNetwork,
+  type ProgramFormErrors,
+  type ProgramFormValues,
+  type TrainingLevel,
+  type TrainingProgram,
+} from '../../../domain/trainingProgram.js';
+import styles from './components.module.css';
+
+interface Props {
+  program?: TrainingProgram;
+  networks: KnowledgeNetwork[];
+  networksError: Error | null;
+  isSaving: boolean;
+  error: Error | null;
+  onSubmit(values: ProgramFormValues): void;
+  onClose(): void;
+}
+
+// E1: crear. E2: editar (subir la versión en 1 lo resuelve el dominio).
+export function ProgramFormModal({ program, networks, networksError, isSaving, error, onSubmit, onClose }: Props) {
+  const [values, setValues] = useState<ProgramFormValues>(() =>
+    program ? programToFormValues(program) : EMPTY_PROGRAM_FORM,
+  );
+  const [errors, setErrors] = useState<ProgramFormErrors>({});
+  const title = program ? 'Editar programa' : 'Nuevo programa';
+
+  const set = <K extends keyof ProgramFormValues>(key: K, value: ProgramFormValues[K]) =>
+    setValues((current) => ({ ...current, [key]: value }));
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    const found = validateProgramForm(values);
+    setErrors(found);
+    if (Object.keys(found).length === 0) onSubmit(values);
+  };
+
+  const hasCurrentNetwork = networks.some((network) => network.id === values.knowledge_network_id);
+
+  return (
+    <div className={styles.backdrop} role="presentation" onMouseDown={onClose}>
+      <div
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="program-form-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="program-form-title">{title}</h2>
+        {program && (
+          <p className={styles.hint}>
+            Versión vigente: {program.version}. Al guardar pasará a la versión {program.version + 1}.
+          </p>
+        )}
+
+        <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          <label className={styles.field}>
+            <span>Red de conocimiento</span>
+            <select
+              value={values.knowledge_network_id}
+              onChange={(event) => set('knowledge_network_id', event.target.value)}
+            >
+              <option value="">Selecciona una red</option>
+              {values.knowledge_network_id && !hasCurrentNetwork && (
+                <option value={values.knowledge_network_id}>Red actual del programa</option>
+              )}
+              {networks.map((network) => (
+                <option key={network.id} value={network.id}>{network.name}</option>
+              ))}
+            </select>
+            {networksError && <span className={styles.fieldError}>No pudimos cargar las redes de conocimiento.</span>}
+            {errors.knowledge_network_id && <span className={styles.fieldError}>{errors.knowledge_network_id}</span>}
+          </label>
+
+          <label className={styles.field}>
+            <span>Código del programa</span>
+            <input value={values.program_code} onChange={(event) => set('program_code', event.target.value)} />
+            {errors.program_code && <span className={styles.fieldError}>{errors.program_code}</span>}
+          </label>
+
+          <label className={styles.field}>
+            <span>Nombre</span>
+            <input value={values.name} onChange={(event) => set('name', event.target.value)} />
+            {errors.name && <span className={styles.fieldError}>{errors.name}</span>}
+          </label>
+
+          <label className={styles.field}>
+            <span>Nivel de formación</span>
+            <select
+              value={values.training_level}
+              onChange={(event) => set('training_level', event.target.value as TrainingLevel | '')}
+            >
+              <option value="">Selecciona un nivel</option>
+              {TRAINING_LEVELS.map((level) => (
+                <option key={level} value={level}>{TRAINING_LEVEL_LABELS[level]}</option>
+              ))}
+            </select>
+            {errors.training_level && <span className={styles.fieldError}>{errors.training_level}</span>}
+          </label>
+
+          <label className={styles.field}>
+            <span>Horas totales</span>
+            <input
+              inputMode="numeric"
+              value={values.total_hours}
+              onChange={(event) => set('total_hours', event.target.value)}
+            />
+            {errors.total_hours && <span className={styles.fieldError}>{errors.total_hours}</span>}
+          </label>
+
+          {error && <div className={styles.errorBox} role="alert">{error.message}</div>}
+
+          <div className={styles.actions}>
+            <button className={styles.secondaryButton} type="button" onClick={onClose}>Cancelar</button>
+            <button className={styles.primaryButton} type="submit" disabled={isSaving}>
+              {isSaving ? 'Guardando…' : program ? 'Guardar cambios' : 'Guardar programa'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+===== src\adapter\in\components\ProgramsTable.tsx =====
+import {
+  canEditProgram,
+  getTrainingLevelLabel,
+  type TrainingProgram,
+} from '../../../domain/trainingProgram.js';
+import styles from './components.module.css';
+import { ProgramActiveBadge } from './ProgramActiveBadge.js';
+
+interface Props {
+  programs: TrainingProgram[];
+  networkNames: ReadonlyMap<string, string>;
+  selectedId?: string;
+  canManage: boolean;
+  onSelect(program: TrainingProgram): void;
+  onEdit(program: TrainingProgram): void;
+  onDeactivate(program: TrainingProgram): void;
+}
+
+// E1: tabla de programas. E2: muestra la versión vigente. E5: estado y baja.
+export function ProgramsTable({ programs, networkNames, selectedId, canManage, onSelect, onEdit, onDeactivate }: Props) {
+  return (
+    <div className={styles.tableWrapper}>
+      <table className={styles.table} aria-label="Programas de formación">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Programa</th>
+            <th>Red de conocimiento</th>
+            <th>Nivel</th>
+            <th>Horas</th>
+            <th>Versión</th>
+            <th>Estado</th>
+            {canManage && <th>Acciones</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {programs.map((program) => (
+            <tr key={program.id} data-selected={String(program.id === selectedId)}>
+              <td data-label="Código">{program.program_code}</td>
+              <td data-label="Programa">
+                <button className={styles.linkButton} type="button" onClick={() => onSelect(program)}>
+                  {program.name}
+                </button>
+              </td>
+              <td data-label="Red de conocimiento">{networkNames.get(program.knowledge_network_id) ?? '—'}</td>
+              <td data-label="Nivel">{getTrainingLevelLabel(program.training_level)}</td>
+              <td data-label="Horas">{program.total_hours} h</td>
+              <td data-label="Versión">v{program.version}</td>
+              <td data-label="Estado"><ProgramActiveBadge isActive={program.is_active} /></td>
+              {canManage && (
+                <td data-label="Acciones">
+                  <div className={styles.rowActions}>
+                    <button
+                      className={styles.secondaryButton}
+                      type="button"
+                      aria-label={`Editar ${program.program_code}`}
+                      disabled={!canEditProgram(program)}
+                      onClick={() => onEdit(program)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className={styles.dangerButton}
+                      type="button"
+                      aria-label={`Dar de baja ${program.program_code}`}
+                      disabled={!program.is_active}
+                      onClick={() => onDeactivate(program)}
+                    >
+                      Dar de baja
+                    </button>
+                  </div>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+===== src\adapter\in\pages\FichasPage.tsx =====
+import { type FormEvent, useState } from 'react';
+
+import type { FichasApi } from '../../../application/ports/FichasApi.js';
+import { type FichasFilters, useFichas } from '../../../application/useFichas.js';
+import {
+  FICHA_STATUSES,
+  type FichaStatus,
+} from '../../../domain/ficha.js';
+import styles from '../../../App.module.css';
+import { FichaDetailPanel } from '../components/FichaDetailPanel.js';
+import { FichaStatusBadge } from '../components/FichaStatusBadge.js';
+
+interface Props {
+  api: FichasApi;
+}
+
+const STATUS_FILTER_LABELS: Record<FichaStatus, string> = {
+  INDUCTION: 'Inducción',
+  EXECUTION: 'Ejecución',
+  PRODUCTIVE_STAGE: 'Etapa productiva',
+  COMPLETED: 'Finalizada',
+  CANCELLED: 'Cancelada',
+};
+
+export function FichasPage({ api }: Props) {
+  const [draftFilters, setDraftFilters] = useState<FichasFilters>({});
+  const [filters, setFilters] = useState<FichasFilters>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedFichaId, setSelectedFichaId] = useState<string>();
+  const fichas = useFichas(api, { ...filters, page, pageSize });
+
+  const applyFilters = (event: FormEvent) => {
+    event.preventDefault();
+    setPage(1);
+    setFilters(draftFilters);
+  };
+
+  const clearFilters = () => {
+    setDraftFilters({});
+    setFilters({});
+    setPage(1);
+  };
+
+  const pagination = fichas.pagination;
+  const firstItem = pagination && pagination.total_items > 0
+    ? (pagination.page - 1) * pagination.page_size + 1
+    : 0;
+  const lastItem = pagination
+    ? Math.min(pagination.page * pagination.page_size, pagination.total_items)
+    : 0;
+
+  return (
+    <main className={styles.root} data-mfe="academic-management">
+      <header className={styles.pageHeader}>
+        <div>
+          <h1>Fichas</h1>
+          <p>Consulta y ubica las fichas del centro de formación.</p>
+        </div>
+      </header>
+
+      <form className={styles.filters} onSubmit={applyFilters} aria-label="Filtros de fichas">
+        <label>
+          <span>Programa</span>
+          <input
+            value={draftFilters.programId ?? ''}
+            onChange={(event) => setDraftFilters((current) => ({ ...current, programId: event.target.value }))}
+            placeholder="ID del programa"
+          />
+        </label>
+        <label>
+          <span>Estado</span>
+          <select
+            value={draftFilters.status ?? ''}
+            disabled={draftFilters.activeOnly}
+            onChange={(event) => setDraftFilters((current) => ({
+              ...current,
+              status: (event.target.value || undefined) as FichaStatus | undefined,
+            }))}
+          >
+            <option value="">Todos</option>
+            {FICHA_STATUSES.map((status) => (
+              <option key={status} value={status}>{STATUS_FILTER_LABELS[status]}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.checkLabel}>
+          <input
+            type="checkbox"
+            checked={draftFilters.activeOnly ?? false}
+            onChange={(event) => setDraftFilters((current) => ({ ...current, activeOnly: event.target.checked }))}
+          />
+          <span>Solo fichas activas</span>
+        </label>
+        <div className={styles.filterActions}>
+          <button className={styles.secondaryButton} type="button" onClick={clearFilters}>Limpiar</button>
+          <button className={styles.primaryButton} type="submit">Aplicar filtros</button>
+        </div>
+      </form>
+
+      <section className={styles.panel} aria-labelledby="fichas-title">
+        <div className={styles.panelHeader}>
+          <div>
+            <h2 id="fichas-title">Fichas del centro</h2>
+            <p>{pagination ? `${pagination.total_items} registros encontrados` : 'Consultando registros'}</p>
+          </div>
+          {fichas.isLoading && <span className={styles.loadingLabel}>Actualizando…</span>}
+        </div>
+
+        {fichas.error && (
+          <div className={styles.errorState} role="alert">
+            <strong>No pudimos cargar las fichas</strong>
+            <p>{fichas.error.message}</p>
+            <button type="button" onClick={fichas.retry}>Reintentar</button>
+          </div>
+        )}
+
+        {!fichas.error && fichas.isLoading && fichas.data.length === 0 && (
+          <div className={styles.loadingState} aria-label="Cargando fichas">
+            <span /><span /><span />
+          </div>
+        )}
+
+        {!fichas.error && !fichas.isLoading && fichas.data.length === 0 && (
+          <div className={styles.emptyState}>
+            <span aria-hidden="true" className={styles.emptyIcon}>⌕</span>
+            <h3>No hay fichas que coincidan con los filtros</h3>
+            <p>Prueba cambiando o limpiando los criterios de búsqueda.</p>
+            <button className={styles.secondaryButton} type="button" onClick={clearFilters}>Limpiar filtros</button>
+          </div>
+        )}
+
+        {fichas.data.length > 0 && (
+          <div className={styles.tableWrapper}>
+            <table>
+              <thead>
+                <tr><th>Ficha</th><th>Programa</th><th>Estado</th><th>Capacidad</th></tr>
+              </thead>
+              <tbody>
+                {fichas.data.map((ficha) => (
+                  <tr key={ficha.id}>
+                    <td data-label="Ficha">
+                      <button className={styles.rowLink} type="button" onClick={() => setSelectedFichaId(ficha.id)}>{ficha.ficha_number}</button>
+                    </td>
+                    <td data-label="Programa"><span className={styles.programId} title={ficha.program_id}>{ficha.program_id}</span></td>
+                    <td data-label="Estado"><FichaStatusBadge status={ficha.status} /></td>
+                    <td data-label="Capacidad">{ficha.max_capacity} aprendices</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {pagination && pagination.total_items > 0 && (
+          <footer className={styles.pagination}>
+            <span>Mostrando {firstItem}–{lastItem} de {pagination.total_items}</span>
+            <label>Por página
+              <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
+                <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
+              </select>
+            </label>
+            <div>
+              <button type="button" disabled={page <= 1 || fichas.isLoading} onClick={() => setPage((current) => current - 1)}>‹ Anterior</button>
+              <span>Página {pagination.page} de {pagination.total_pages}</span>
+              <button type="button" disabled={page >= pagination.total_pages || fichas.isLoading} onClick={() => setPage((current) => current + 1)}>Siguiente ›</button>
+            </div>
+          </footer>
+        )}
+      </section>
+
+      <FichaDetailPanel
+        api={api}
+        fichaId={selectedFichaId}
+        onClose={() => setSelectedFichaId(undefined)}
+      />
+    </main>
+  );
+}
+
+export default FichasPage;
+
+
+===== src\adapter\in\pages\ProgramsPage.module.css =====
+.root { display: grid; gap: 1.5rem; padding: 1.5rem; background: #f5f7f8; min-height: 100%; color: #1c2b33; }
+.pageHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.pageHeader h1 { margin: 0 0 .25rem; font-size: 1.75rem; }
+.pageHeader p { margin: 0; color: #5b6b73; }
+.panel { background: #fff; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0, 0, 0, .08); display: grid; gap: 1rem; }
+.panelHeader { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.panelHeader h2 { margin: 0; font-size: 1.15rem; }
+.panelHeader p { margin: .2rem 0 0; color: #5b6b73; }
+.filter { display: grid; gap: .25rem; font-size: .85rem; font-weight: 600; }
+.filter select { padding: .45rem .6rem; border: 1px solid #c5ced3; border-radius: 8px; background: #fff; }
+.emptyState { text-align: center; padding: 2rem 1rem; color: #5b6b73; }
+.pagination { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.pagination div { display: flex; gap: .5rem; }
+
+===== src\adapter\in\pages\ProgramsPage.tsx =====
+import { useMemo, useState } from 'react';
+
+import type { TrainingProgramsApi } from '../../../application/ports/TrainingProgramsApi.js';
+import { useKnowledgeNetworks } from '../../../application/useKnowledgeNetworks.js';
+import { useTrainingPrograms } from '../../../application/useTrainingPrograms.js';
+import {
+  toProgramCreate,
+  toProgramUpdate,
+  type ProgramFormValues,
+  type TrainingProgram,
+} from '../../../domain/trainingProgram.js';
+import { ConfirmDeactivateDialog } from '../components/ConfirmDeactivateDialog.js';
+import { CurriculumTree } from '../components/CurriculumTree.js';
+import { ProgramFormModal } from '../components/ProgramFormModal.js';
+import { ProgramsTable } from '../components/ProgramsTable.js';
+import ui from '../components/components.module.css';
+import styles from './ProgramsPage.module.css';
+
+interface Props {
+  api: TrainingProgramsApi;
+  // ACADEMIC_PROGRAM_MANAGE: si el usuario no lo tiene, se ocultan los botones de escritura.
+  canManage?: boolean;
+}
+
+type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
+type FormState = { kind: 'create' } | { kind: 'edit'; program: TrainingProgram } | null;
+
+export function ProgramsPage({ api, canManage = true }: Props) {
+  const [status, setStatus] = useState<StatusFilter>('ALL');
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string>();
+  const [form, setForm] = useState<FormState>(null);
+  const [toDeactivate, setToDeactivate] = useState<TrainingProgram | null>(null);
+
+  const programs = useTrainingPrograms(api, {
+    page,
+    isActive: status === 'ALL' ? undefined : status === 'ACTIVE',
+  });
+  const networks = useKnowledgeNetworks(api);
+  const networkNames = useMemo(
+    () => new Map(networks.data.map((network) => [network.id, network.name] as const)),
+    [networks.data],
+  );
+  const selected = programs.data.find((program) => program.id === selectedId);
+  const pagination = programs.pagination;
+
+  const openCreate = () => {
+    programs.clearActionError();
+    setForm({ kind: 'create' });
+  };
+
+  const openEdit = (program: TrainingProgram) => {
+    programs.clearActionError();
+    setForm({ kind: 'edit', program });
+  };
+
+  const openDeactivate = (program: TrainingProgram) => {
+    programs.clearActionError();
+    setToDeactivate(program);
+  };
+
+  const submitProgram = async (values: ProgramFormValues) => {
+    const ok = form?.kind === 'edit'
+      ? await programs.update(form.program.id, toProgramUpdate(form.program, values))
+      : await programs.create(toProgramCreate(values));
+    if (ok) setForm(null);
+  };
+
+  const confirmDeactivate = async () => {
+    if (!toDeactivate) return;
+    if (await programs.deactivate(toDeactivate.id)) setToDeactivate(null);
+  };
+
+  return (
+    <main className={styles.root} data-mfe="academic-management">
+      <header className={styles.pageHeader}>
+        <div>
+          <h1>Currículo académico</h1>
+          <p>Administra los programas de formación, sus competencias y resultados de aprendizaje.</p>
+        </div>
+        {canManage && (
+          <button className={ui.primaryButton} type="button" onClick={openCreate}>Nuevo programa</button>
+        )}
+      </header>
+
+      <section className={styles.panel} aria-labelledby="programs-title">
+        <div className={styles.panelHeader}>
+          <div>
+            <h2 id="programs-title">Programas de formación</h2>
+            <p>{pagination ? `${pagination.total_items} programas encontrados` : 'Consultando programas'}</p>
+          </div>
+          <label className={styles.filter}>
+            <span>Estado</span>
+            <select
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value as StatusFilter);
+                setPage(1);
+              }}
+            >
+              <option value="ALL">Todos</option>
+              <option value="ACTIVE">Activos</option>
+              <option value="INACTIVE">Inactivos</option>
+            </select>
+          </label>
+        </div>
+
+        {programs.error && (
+          <div className={ui.errorBox} role="alert">
+            <strong>No pudimos cargar los programas</strong>
+            <p>{programs.error.message}</p>
+            <button className={ui.secondaryButton} type="button" onClick={programs.retry}>Reintentar</button>
+          </div>
+        )}
+
+        {!programs.error && programs.isLoading && programs.data.length === 0 && (
+          <p className={ui.muted} aria-label="Cargando programas">Cargando programas…</p>
+        )}
+
+        {!programs.error && !programs.isLoading && programs.data.length === 0 && (
+          <div className={styles.emptyState}>
+            <h3>No hay programas que coincidan con el filtro</h3>
+            <p>Prueba con otro estado{canManage ? ' o crea un programa nuevo.' : '.'}</p>
+          </div>
+        )}
+
+        {programs.data.length > 0 && (
+          <ProgramsTable
+            programs={programs.data}
+            networkNames={networkNames}
+            selectedId={selectedId}
+            canManage={canManage}
+            onSelect={(program) => setSelectedId(program.id)}
+            onEdit={openEdit}
+            onDeactivate={openDeactivate}
+          />
+        )}
+
+        {pagination && pagination.total_items > 0 && (
+          <footer className={styles.pagination}>
+            <span>Página {pagination.page} de {pagination.total_pages}</span>
+            <div>
+              <button
+                className={ui.secondaryButton}
+                type="button"
+                disabled={page <= 1 || programs.isLoading}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                ‹ Anterior
+              </button>
+              <button
+                className={ui.secondaryButton}
+                type="button"
+                disabled={page >= pagination.total_pages || programs.isLoading}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Siguiente ›
+              </button>
+            </div>
+          </footer>
+        )}
+      </section>
+
+      {selected && <CurriculumTree key={selected.id} api={api} program={selected} canManage={canManage} />}
+
+      {form && (
+        <ProgramFormModal
+          program={form.kind === 'edit' ? form.program : undefined}
+          networks={networks.data}
+          networksError={networks.error}
+          isSaving={programs.isSaving}
+          error={programs.actionError}
+          onClose={() => setForm(null)}
+          onSubmit={(values) => void submitProgram(values)}
+        />
+      )}
+
+      {toDeactivate && (
+        <ConfirmDeactivateDialog
+          program={toDeactivate}
+          isSaving={programs.isSaving}
+          error={programs.actionError}
+          onCancel={() => setToDeactivate(null)}
+          onConfirm={() => void confirmDeactivate()}
+        />
+      )}
+    </main>
+  );
+}
+
+export default ProgramsPage;
+
+===== src\adapter\out\http\HttpFichasApi.ts =====
+import type { FichasApi } from '../../../application/ports/FichasApi.js';
+import type {
+  ContractFicha,
+  Ficha,
+  FichasPageResult,
+  ListFichasQuery,
+} from '../../../domain/ficha.js';
+
+interface ContractPage {
+  data: Array<Omit<ContractFicha, 'status'> & { status: string }>;
+  pagination: FichasPageResult['pagination'];
+}
+
+export class HttpFichasApi implements FichasApi {
+  private readonly baseUrl: string;
+
+  constructor(baseUrl = '/api/v1') {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+  }
+
+  async list(query: ListFichasQuery, signal?: AbortSignal): Promise<FichasPageResult> {
+    const params = new URLSearchParams();
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') params.set(key, String(value));
+    });
+
+    const response = await fetch(`${this.baseUrl}/fichas?${params.toString()}`, {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+
+    return this.parseResponse<ContractPage>(response);
+  }
+
+  async getById(id: string, signal?: AbortSignal): Promise<Ficha> {
+    const response = await fetch(`${this.baseUrl}/fichas/${encodeURIComponent(id)}`, {
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+      signal,
+    });
+
+    return this.parseResponse<Ficha>(response);
+  }
+
+  private async parseResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      throw new Error(`No fue posible consultar las fichas (HTTP ${response.status}).`);
+    }
+
+    return response.json() as Promise<T>;
+  }
+}
+
+
+===== src\adapter\out\http\HttpTrainingProgramsApi.ts =====
+import type { TrainingProgramsApi } from '../../../application/ports/TrainingProgramsApi.js';
+import type {
+  Competency,
+  CompetencyCreate,
+  KnowledgeNetwork,
+  LearningOutcome,
+  ListCompetenciesQuery,
+  ListKnowledgeNetworksQuery,
+  ListLearningOutcomesQuery,
+  ListTrainingProgramsQuery,
+  Page,
+  TrainingProgram,
+  TrainingProgramCreate,
+  TrainingProgramUpdate,
+  TrainingProgramsPageResult,
+} from '../../../domain/trainingProgram.js';
+
+interface ErrorBody {
+  error?: { message?: string };
+}
+
+const toQueryString = (query: object): string => {
+  const params = new URLSearchParams();
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') params.set(key, String(value));
+  });
+
+  const text = params.toString();
+  return text ? `?${text}` : '';
+};
+
+export class HttpTrainingProgramsApi implements TrainingProgramsApi {
+  private readonly baseUrl: string;
+
+  constructor(baseUrl = '/api/v1') {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+  }
+
+  list(query: ListTrainingProgramsQuery, signal?: AbortSignal): Promise<TrainingProgramsPageResult> {
+    return this.request('GET', `/training-programs${toQueryString(query)}`, { signal });
+  }
+
+  create(body: TrainingProgramCreate): Promise<TrainingProgram> {
+    return this.request('POST', '/training-programs', { body });
+  }
+
+  getById(id: string, signal?: AbortSignal): Promise<TrainingProgram> {
+    return this.request('GET', `/training-programs/${encodeURIComponent(id)}`, { signal });
+  }
+
+  update(id: string, body: TrainingProgramUpdate): Promise<TrainingProgram> {
+    return this.request('PUT', `/training-programs/${encodeURIComponent(id)}`, { body });
+  }
+
+  deactivate(id: string): Promise<void> {
+    return this.request('DELETE', `/training-programs/${encodeURIComponent(id)}`);
+  }
+
+  listCompetencies(
+    programId: string,
+    query: ListCompetenciesQuery,
+    signal?: AbortSignal,
+  ): Promise<Page<Competency>> {
+    return this.request(
+      'GET',
+      `/training-programs/${encodeURIComponent(programId)}/competencies${toQueryString(query)}`,
+      { signal },
+    );
+  }
+
+  createCompetency(programId: string, body: CompetencyCreate): Promise<Competency> {
+    return this.request('POST', `/training-programs/${encodeURIComponent(programId)}/competencies`, { body });
+  }
+
+  listLearningOutcomes(
+    competencyId: string,
+    query: ListLearningOutcomesQuery,
+    signal?: AbortSignal,
+  ): Promise<Page<LearningOutcome>> {
+    return this.request(
+      'GET',
+      `/competencies/${encodeURIComponent(competencyId)}/learning-outcomes${toQueryString(query)}`,
+      { signal },
+    );
+  }
+
+  listKnowledgeNetworks(
+    query: ListKnowledgeNetworksQuery,
+    signal?: AbortSignal,
+  ): Promise<Page<KnowledgeNetwork>> {
+    return this.request('GET', `/knowledge-networks${toQueryString(query)}`, { signal });
+  }
+
+  private async request<T>(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    path: string,
+    options: { body?: unknown; signal?: AbortSignal } = {},
+  ): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const hasBody = options.body !== undefined;
+    if (hasBody) headers['Content-Type'] = 'application/json';
+
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method,
+      credentials: 'include',
+      headers,
+      body: hasBody ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+
+    if (!response.ok) throw new Error(await this.errorMessage(response));
+    if (response.status === 204) return undefined as T;
+
+    return response.json() as Promise<T>;
+  }
+
+  // El contrato devuelve { error: { code, message } }; el mensaje ya viene en español.
+  private async errorMessage(response: Response): Promise<string> {
+    try {
+      const body = (await response.json()) as ErrorBody;
+      if (body.error?.message) return body.error.message;
+    } catch {
+      // cuerpo vacío o no JSON: se usa el mensaje genérico
+    }
+
+    return `No fue posible completar la operación (HTTP ${response.status}).`;
+  }
+}
+
+===== src\App.module.css =====
+.root,
+.root * {
+  box-sizing: border-box;
+}
+
+.root button,
+.root input,
+.root select {
+  font: inherit;
+}
+
+.root {
+  min-height: 100vh;
+  padding: 2rem;
+  background: #f4f6f8;
+  color: #17212b;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.pageHeader,
+.filters,
+.panel {
+  width: min(100%, 1240px);
+  margin-inline: auto;
+}
+
+.pageHeader {
+  margin-bottom: 1rem;
+}
+
+.pageHeader h1 {
+  margin: 0 0 .35rem;
+  font-size: 1.65rem;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+}
+
+.pageHeader p {
+  margin: 0;
+  color: #53606d;
+  font-size: .9rem;
+}
+
+.eyebrow {
+  color: #00843d;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.filters,
+.panel {
+  border: 1px solid #e0e5e9;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.45fr) minmax(170px, 1fr) auto auto;
+  gap: .8rem;
+  align-items: end;
+  padding: .9rem;
+  margin-bottom: 1rem;
+}
+
+.filters label:not(.checkLabel) {
+  display: grid;
+  gap: .32rem;
+}
+
+.filters label > span {
+  color: #28333d;
+  font-size: .73rem;
+  font-weight: 700;
+}
+
+.filters input:not([type="checkbox"]),
+.filters select {
+  width: 100%;
+  min-height: 38px;
+  padding: .5rem .65rem;
+  border: 1px solid #d7dde2;
+  border-radius: 4px;
+  background: #fff;
+  color: #17212b;
+  font-size: .82rem;
+}
+
+.filters input:focus,
+.filters select:focus {
+  border-color: #00843d;
+  outline: 3px solid rgb(0 132 61 / 14%);
+}
+
+.checkLabel {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  white-space: nowrap;
+}
+
+.checkLabel input {
+  width: 17px;
+  height: 17px;
+  accent-color: #00843d;
+}
+
+.filterActions {
+  display: flex;
+  gap: .5rem;
+}
+
+.primaryButton,
+.secondaryButton,
+.errorState button,
+.pagination button {
+  min-height: 38px;
+  border-radius: 4px;
+  padding: .5rem .8rem;
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.primaryButton {
+  border: 1px solid #007735;
+  background: #00843d;
+  color: #fff;
+}
+
+.primaryButton:hover {
+  background: #006f33;
+}
+
+.secondaryButton,
+.pagination button,
+.errorState button {
+  border: 1px solid #d1d8dd;
+  background: #fff;
+  color: #26343d;
+}
+
+.secondaryButton:hover,
+.pagination button:not(:disabled):hover,
+.errorState button:hover {
+  border-color: #00843d;
+  color: #007735;
+}
+
+.panel {
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e6eaed;
+}
+
+.panelHeader h2 {
+  margin: 0 0 .2rem;
+  font-size: 1rem;
+}
+
+.panelHeader p {
+  margin: 0;
+  color: #6b7680;
+  font-size: .78rem;
+}
+
+.loadingLabel {
+  color: #00843d;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.root table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.root th {
+  padding: .7rem 1rem;
+  background: #f7f8f9;
+  color: #58636d;
+  font-size: .69rem;
+  letter-spacing: .025em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.root td {
+  padding: .85rem 1rem;
+  border-top: 1px solid #e8ecef;
+  font-size: .82rem;
+  vertical-align: middle;
+}
+
+.root tbody tr:hover {
+  background: #f8fbf9;
+}
+
+.rowLink,
+.linkButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #007a38;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.programId {
+  display: block;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .8rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .32rem;
+  width: max-content;
+  padding: .24rem .5rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: .69rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-info {
+  color: #17538b;
+  background: #edf6ff;
+  border-color: #c9e2f8;
+}
+
+.badge-success {
+  color: #087537;
+  background: #ebfaef;
+  border-color: #bde9ca;
+}
+
+.badge-warning {
+  color: #765400;
+  background: #fff8df;
+  border-color: #eed98e;
+}
+
+.badge-danger {
+  color: #a12d2d;
+  background: #fff0f0;
+  border-color: #f2cccc;
+}
+
+.badge-neutral {
+  color: #525c65;
+  background: #f0f2f3;
+  border-color: #d8dde0;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .8rem 1rem;
+  border-top: 1px solid #e6eaed;
+  color: #5e6973;
+  font-size: .76rem;
+}
+
+.pagination label,
+.pagination div {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.pagination select {
+  min-height: 34px;
+  border: 1px solid #d1d8dd;
+  border-radius: 4px;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.emptyState,
+.loadingState,
+.errorState {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.emptyState h3 {
+  margin: .75rem 0 .3rem;
+  font-size: 1rem;
+}
+
+.emptyState p,
+.errorState p {
+  margin: 0 0 1rem;
+  color: #66717a;
+  font-size: .82rem;
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eaf6ee;
+  color: #00843d;
+  font-size: 1.5rem;
+}
+
+.errorState {
+  color: #922d2d;
+  background: #fffafa;
+}
+
+.loadingState {
+  gap: .65rem;
+}
+
+.loadingState span {
+  width: min(92%, 900px);
+  height: 40px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #eef1f3 25%, #f8f9fa 50%, #eef1f3 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: flex-end;
+  background: rgb(16 24 32 / 45%);
+}
+
+.drawer {
+  width: min(100%, 500px);
+  height: 100%;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: -12px 0 32px rgb(0 0 0 / 16%);
+}
+
+.drawerHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.25rem;
+  border-bottom: 1px solid #e1e6e9;
+  background: rgb(255 255 255 / 97%);
+}
+
+.drawerHeader h2 {
+  margin: .25rem 0 0;
+  font-size: 1.25rem;
+}
+
+.iconButton {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d1d8dd;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1.3rem;
+}
+
+.detailLoading {
+  padding: 2rem;
+  color: #5e6973;
+}
+
+.detailBody {
+  display: grid;
+  gap: 1.4rem;
+  padding: 1.25rem;
+}
+
+.detailBody h3 {
+  margin: 0 0 .7rem;
+  font-size: .95rem;
+}
+
+.detailGrid {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid #e1e6e9;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.detailGrid div {
+  display: grid;
+  grid-template-columns: 42% 1fr;
+  gap: 1rem;
+  padding: .75rem;
+  border-top: 1px solid #e5e9ec;
+}
+
+.detailGrid div:first-child {
+  border-top: 0;
+}
+
+.detailGrid dt {
+  color: #68737c;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.detailGrid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: .8rem;
+}
+
+.widget {
+  display: grid;
+  gap: .18rem;
+  min-height: 112px;
+  padding: .9rem 1rem;
+  border: 1px solid #e0e5e9;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.widgetTitle {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  color: #313d47;
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.widgetTitle svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.widget strong {
+  color: #17212b;
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.widget .linkButton {
+  justify-self: start;
+  color: #007a38;
+  font-size: .7rem;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filterActions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .root {
+    padding: 1rem;
+  }
+
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .filterActions > * {
+    flex: 1;
+  }
+
+  .root thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .root tbody,
+  .root tr,
+  .root td {
+    display: block;
+  }
+
+  .root tbody tr {
+    padding: .55rem 1rem;
+    border-top: 1px solid #e1e6e9;
+  }
+
+  .root td {
+    display: grid;
+    grid-template-columns: 40% 1fr;
+    padding: .48rem 0;
+    border: 0;
+  }
+
+  .root td::before {
+    content: attr(data-label);
+    color: #66717a;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pagination div {
+    justify-content: space-between;
+  }
+
+  .drawer {
+    width: 100%;
+  }
+}
+
+
+===== src\App.tsx =====
+import { type FC, useMemo } from 'react';
+
+import { FichasPage } from './adapter/in/pages/FichasPage.js';
+import { HttpFichasApi } from './adapter/out/http/HttpFichasApi.js';
+import type { AcademicManagementMfeProps } from './contracts/remote-props.js';
+
+const App: FC<AcademicManagementMfeProps> = ({ apiBaseUrl = '/api/v1' }) => {
+  const api = useMemo(() => new HttpFichasApi(apiBaseUrl), [apiBaseUrl]);
+
+  return <FichasPage api={api} />;
+};
+
+export default App;
+
+
+===== src\application\ports\FichasApi.ts =====
+import type { Ficha, FichasPageResult, ListFichasQuery } from '../../domain/ficha.js';
+
+export interface FichasApi {
+  list(query: ListFichasQuery, signal?: AbortSignal): Promise<FichasPageResult>;
+  getById(id: string, signal?: AbortSignal): Promise<Ficha>;
+}
+
+
+===== src\application\ports\TrainingProgramsApi.ts =====
+import type {
+  Competency,
+  CompetencyCreate,
+  KnowledgeNetwork,
+  LearningOutcome,
+  ListCompetenciesQuery,
+  ListKnowledgeNetworksQuery,
+  ListLearningOutcomesQuery,
+  ListTrainingProgramsQuery,
+  Page,
+  TrainingProgram,
+  TrainingProgramCreate,
+  TrainingProgramUpdate,
+  TrainingProgramsPageResult,
+} from '../../domain/trainingProgram.js';
+
+export interface TrainingProgramsApi {
+  // E1
+  list(query: ListTrainingProgramsQuery, signal?: AbortSignal): Promise<TrainingProgramsPageResult>;
+  create(body: TrainingProgramCreate): Promise<TrainingProgram>;
+  // E2
+  getById(id: string, signal?: AbortSignal): Promise<TrainingProgram>;
+  update(id: string, body: TrainingProgramUpdate): Promise<TrainingProgram>;
+  // E5 (baja lógica: is_active = false)
+  deactivate(id: string): Promise<void>;
+  // E3
+  listCompetencies(
+    programId: string,
+    query: ListCompetenciesQuery,
+    signal?: AbortSignal,
+  ): Promise<Page<Competency>>;
+  createCompetency(programId: string, body: CompetencyCreate): Promise<Competency>;
+  // E4
+  listLearningOutcomes(
+    competencyId: string,
+    query: ListLearningOutcomesQuery,
+    signal?: AbortSignal,
+  ): Promise<Page<LearningOutcome>>;
+  // Selector del formulario de programa
+  listKnowledgeNetworks(
+    query: ListKnowledgeNetworksQuery,
+    signal?: AbortSignal,
+  ): Promise<Page<KnowledgeNetwork>>;
+}
+
+===== src\application\useFichaDetail.ts =====
+import { useCallback, useEffect, useState } from 'react';
+
+import type { FichasApi } from './ports/FichasApi.js';
+import type { Ficha } from '../domain/ficha.js';
+
+export function useFichaDetail(api: FichasApi, id?: string) {
+  const [data, setData] = useState<Ficha | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!id) {
+      setData(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    void api
+      .getById(id, controller.signal)
+      .then(setData)
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause : new Error('Error inesperado al consultar la ficha.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [api, id, reloadKey]);
+
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+
+  return { data, isLoading, error, retry };
+}
+
+
+===== src\application\useFichas.ts =====
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import type { FichasApi } from './ports/FichasApi.js';
+import type { FichaStatus, FichasPageResult, ListFichasQuery } from '../domain/ficha.js';
+
+export interface FichasFilters {
+  programId?: string;
+  status?: FichaStatus;
+  activeOnly?: boolean;
+}
+
+export interface UseFichasOptions extends FichasFilters {
+  page?: number;
+  pageSize?: number;
+  sort?: string;
+}
+
+export function buildFichasQuery(options: UseFichasOptions): ListFichasQuery {
+  return {
+    page: options.page ?? 1,
+    page_size: options.pageSize ?? 10,
+    sort: options.sort ?? 'start_date:desc',
+    program_id: options.programId || undefined,
+    status: options.activeOnly ? 'EXECUTION' : options.status,
+  };
+}
+
+export function useFichas(api: FichasApi, options: UseFichasOptions = {}) {
+  const [result, setResult] = useState<FichasPageResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const query = useMemo(
+    () => buildFichasQuery(options),
+    [
+      options.activeOnly,
+      options.page,
+      options.pageSize,
+      options.programId,
+      options.sort,
+      options.status,
+    ],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    void api
+      .list(query, controller.signal)
+      .then(setResult)
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause : new Error('Error inesperado al consultar fichas.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [api, query, reloadKey]);
+
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+
+  return { data: result?.data ?? [], pagination: result?.pagination, isLoading, error, retry, query };
+}
+
+
+===== src\application\useKnowledgeNetworks.ts =====
+import { useEffect, useState } from 'react';
+
+import type { TrainingProgramsApi } from './ports/TrainingProgramsApi.js';
+import type { KnowledgeNetwork, ListKnowledgeNetworksQuery } from '../domain/trainingProgram.js';
+
+const NETWORKS_QUERY: ListKnowledgeNetworksQuery = { page: 1, page_size: 100, is_active: true };
+const NO_NETWORKS: KnowledgeNetwork[] = [];
+
+// Selector de red de conocimiento del formulario (knowledge_network_id es obligatorio).
+export function useKnowledgeNetworks(api: TrainingProgramsApi) {
+  const [data, setData] = useState<KnowledgeNetwork[]>(NO_NETWORKS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    void api
+      .listKnowledgeNetworks(NETWORKS_QUERY, controller.signal)
+      .then((page) => setData(page.data))
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause : new Error('Error inesperado al consultar redes.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [api]);
+
+  return { data, isLoading, error };
+}
+
+===== src\application\useLearningOutcomes.ts =====
+import { useCallback, useEffect, useState } from 'react';
+
+import type { TrainingProgramsApi } from './ports/TrainingProgramsApi.js';
+import type { LearningOutcome, ListLearningOutcomesQuery, Page } from '../domain/trainingProgram.js';
+
+const OUTCOMES_QUERY: ListLearningOutcomesQuery = { page: 1, page_size: 100 };
+const NO_OUTCOMES: LearningOutcome[] = [];
+
+// E4: RAP de una competencia. Solo consulta cuando hay competencyId (al expandir).
+export function useLearningOutcomes(api: TrainingProgramsApi, competencyId?: string) {
+  const [result, setResult] = useState<Page<LearningOutcome> | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (!competencyId) {
+      setResult(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    void api
+      .listLearningOutcomes(competencyId, OUTCOMES_QUERY, controller.signal)
+      .then(setResult)
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause : new Error('Error inesperado al consultar los RAP.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [api, competencyId, reloadKey]);
+
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+
+  return { data: result?.data ?? NO_OUTCOMES, pagination: result?.pagination, isLoading, error, retry };
+}
+
+===== src\application\useProgramCompetencies.ts =====
+import { useCallback, useEffect, useState } from 'react';
+
+import type { TrainingProgramsApi } from './ports/TrainingProgramsApi.js';
+import type { Competency, CompetencyCreate, ListCompetenciesQuery, Page } from '../domain/trainingProgram.js';
+
+const COMPETENCIES_QUERY: ListCompetenciesQuery = { page: 1, page_size: 100 };
+const NO_COMPETENCIES: Competency[] = [];
+
+// E3: listar y crear competencias de un programa.
+export function useProgramCompetencies(api: TrainingProgramsApi, programId?: string) {
+  const [result, setResult] = useState<Page<Competency> | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [actionError, setActionError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!programId) {
+      setResult(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    void api
+      .listCompetencies(programId, COMPETENCIES_QUERY, controller.signal)
+      .then(setResult)
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause : new Error('Error inesperado al consultar competencias.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [api, programId, reloadKey]);
+
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+  const clearActionError = useCallback(() => setActionError(null), []);
+
+  const create = useCallback(
+    async (body: CompetencyCreate): Promise<boolean> => {
+      if (!programId) return false;
+      setIsSaving(true);
+      setActionError(null);
+      try {
+        await api.createCompetency(programId, body);
+        setReloadKey((key) => key + 1);
+        return true;
+      } catch (cause) {
+        setActionError(cause instanceof Error ? cause : new Error('Error inesperado al crear la competencia.'));
+        return false;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [api, programId],
+  );
+
+  return {
+    data: result?.data ?? NO_COMPETENCIES,
+    pagination: result?.pagination,
+    isLoading,
+    error,
+    retry,
+    isSaving,
+    actionError,
+    clearActionError,
+    create,
+  };
+}
+
+===== src\application\useTrainingPrograms.ts =====
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import type { TrainingProgramsApi } from './ports/TrainingProgramsApi.js';
+import type {
+  ListTrainingProgramsQuery,
+  TrainingLevel,
+  TrainingProgram,
+  TrainingProgramCreate,
+  TrainingProgramUpdate,
+  TrainingProgramsPageResult,
+} from '../domain/trainingProgram.js';
+
+export interface UseTrainingProgramsOptions {
+  page?: number;
+  pageSize?: number;
+  isActive?: boolean;
+  trainingLevel?: TrainingLevel;
+  programCode?: string;
+}
+
+const NO_PROGRAMS: TrainingProgram[] = [];
+
+export function buildProgramsQuery(options: UseTrainingProgramsOptions): ListTrainingProgramsQuery {
+  return {
+    page: options.page ?? 1,
+    page_size: options.pageSize ?? 10,
+    is_active: options.isActive,
+    training_level: options.trainingLevel,
+    program_code: options.programCode || undefined,
+  };
+}
+
+// E1, E2, E5: lista paginada + crear, editar y dar de baja (baja lógica).
+export function useTrainingPrograms(api: TrainingProgramsApi, options: UseTrainingProgramsOptions = {}) {
+  const [result, setResult] = useState<TrainingProgramsPageResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [actionError, setActionError] = useState<Error | null>(null);
+  const query = useMemo(
+    () => buildProgramsQuery(options),
+    [options.isActive, options.page, options.pageSize, options.programCode, options.trainingLevel],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+
+    void api
+      .list(query, controller.signal)
+      .then(setResult)
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(cause instanceof Error ? cause : new Error('Error inesperado al consultar programas.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [api, query, reloadKey]);
+
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
+  const clearActionError = useCallback(() => setActionError(null), []);
+
+  const mutate = useCallback(async (action: () => Promise<unknown>): Promise<boolean> => {
+    setIsSaving(true);
+    setActionError(null);
+    try {
+      await action();
+      setReloadKey((key) => key + 1);
+      return true;
+    } catch (cause) {
+      setActionError(cause instanceof Error ? cause : new Error('Error inesperado al guardar.'));
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
+
+  const create = useCallback((body: TrainingProgramCreate) => mutate(() => api.create(body)), [api, mutate]);
+  const update = useCallback(
+    (id: string, body: TrainingProgramUpdate) => mutate(() => api.update(id, body)),
+    [api, mutate],
+  );
+  const deactivate = useCallback((id: string) => mutate(() => api.deactivate(id)), [api, mutate]);
+
+  return {
+    data: result?.data ?? NO_PROGRAMS,
+    pagination: result?.pagination,
+    isLoading,
+    error,
+    retry,
+    query,
+    isSaving,
+    actionError,
+    clearActionError,
+    create,
+    update,
+    deactivate,
+  };
+}
+
+===== src\contracts\remote-props.ts =====
+export interface AcademicManagementMfeProps {
+  basePath?: string;
+  apiBaseUrl?: string;
+}
+
+
+===== src\domain\ficha.ts =====
+import type { components, operations } from '../contracts/generated/academic-management.js';
+
+export type ContractFicha = components['schemas']['Ficha'];
+export type Pagination = components['schemas']['Pagination'];
+export type ListFichasQuery = NonNullable<operations['listFichas']['parameters']['query']>;
+
+// El contrato declara un enum, pero la BD aún no lo garantiza. La frontera HTTP
+// mantiene status como string para que un valor nuevo nunca rompa el render.
+export type Ficha = Omit<ContractFicha, 'status'> & { status: string };
+
+export interface FichasPageResult {
+  data: Ficha[];
+  pagination: Pagination;
+}
+
+export type FichaStatus = ContractFicha['status'];
+
+export const FICHA_STATUSES: readonly FichaStatus[] = [
+  'INDUCTION',
+  'EXECUTION',
+  'PRODUCTIVE_STAGE',
+  'COMPLETED',
+  'CANCELLED',
+];
+
+export interface StatusPresentation {
+  label: string;
+  tone: 'info' | 'success' | 'warning' | 'neutral' | 'danger';
+  symbol: string;
+  known: boolean;
+}
+
+const STATUS_PRESENTATION: Record<FichaStatus, Omit<StatusPresentation, 'known'>> = {
+  INDUCTION: { label: 'Inducción', tone: 'info', symbol: '●' },
+  EXECUTION: { label: 'Ejecución', tone: 'success', symbol: '●' },
+  PRODUCTIVE_STAGE: { label: 'Etapa productiva', tone: 'warning', symbol: '◆' },
+  COMPLETED: { label: 'Finalizada', tone: 'neutral', symbol: '✓' },
+  CANCELLED: { label: 'Cancelada', tone: 'danger', symbol: '×' },
+};
+
+export function isFichaStatus(value: string): value is FichaStatus {
+  return FICHA_STATUSES.some((status) => status === value);
+}
+
+export function getFichaStatusPresentation(status: string): StatusPresentation {
+  if (!isFichaStatus(status)) {
+    return { label: 'Estado desconocido', tone: 'neutral', symbol: '?', known: false };
+  }
+
+  return { ...STATUS_PRESENTATION[status], known: true };
+}
+
+export const SHIFT_LABELS: Record<ContractFicha['training_shift'], string> = {
+  DAY: 'Diurna',
+  NIGHT: 'Nocturna',
+  MIXED: 'Mixta',
+};
+
+export const MODALITY_LABELS: Record<ContractFicha['training_modality'], string> = {
+  IN_PERSON: 'Presencial',
+  VIRTUAL: 'Virtual',
+  HYBRID: 'Híbrida',
+};
+
+
+===== src\domain\trainingProgram.ts =====
+import type { components, operations } from '../contracts/generated/academic-management.js';
+
+export type ContractTrainingProgram = components['schemas']['TrainingProgram'];
+export type TrainingProgramCreate = components['schemas']['TrainingProgramCreate'];
+export type TrainingProgramUpdate = components['schemas']['TrainingProgramUpdate'];
+export type Competency = components['schemas']['Competency'];
+export type CompetencyCreate = components['schemas']['CompetencyCreate'];
+export type LearningOutcome = components['schemas']['LearningOutcome'];
+export type KnowledgeNetwork = components['schemas']['KnowledgeNetwork'];
+export type Pagination = components['schemas']['Pagination'];
+
+export type TrainingLevel = ContractTrainingProgram['training_level'];
+
+// Igual que en fichas: el contrato declara un enum, pero la frontera HTTP lo
+// mantiene como string para que un valor nuevo nunca rompa el render.
+export type TrainingProgram = Omit<ContractTrainingProgram, 'training_level'> & {
+  training_level: string;
+};
+
+export interface Page<T> {
+  data: T[];
+  pagination: Pagination;
+}
+
+export type TrainingProgramsPageResult = Page<TrainingProgram>;
+
+export type ListTrainingProgramsQuery = NonNullable<
+  operations['listTrainingPrograms']['parameters']['query']
+>;
+export type ListCompetenciesQuery = NonNullable<
+  operations['listProgramCompetencies']['parameters']['query']
+>;
+export type ListLearningOutcomesQuery = NonNullable<
+  operations['listCompetencyLearningOutcomes']['parameters']['query']
+>;
+export type ListKnowledgeNetworksQuery = NonNullable<
+  operations['listKnowledgeNetworks']['parameters']['query']
+>;
+
+export const TRAINING_LEVELS: readonly TrainingLevel[] = [
+  'AUXILIARY',
+  'OPERATOR',
+  'TECHNICIAN',
+  'TECHNOLOGIST',
+];
+
+export const TRAINING_LEVEL_LABELS: Record<TrainingLevel, string> = {
+  AUXILIARY: 'Auxiliar',
+  OPERATOR: 'Operario',
+  TECHNICIAN: 'Técnico',
+  TECHNOLOGIST: 'Tecnólogo',
+};
+
+export function isTrainingLevel(value: string): value is TrainingLevel {
+  return TRAINING_LEVELS.some((level) => level === value);
+}
+
+export function getTrainingLevelLabel(level: string): string {
+  return isTrainingLevel(level) ? TRAINING_LEVEL_LABELS[level] : 'Nivel desconocido';
+}
+
+export interface ActivePresentation {
+  label: string;
+  tone: 'success' | 'neutral';
+  symbol: string;
+}
+
+// E5: la baja lógica se muestra como "Inactivo"; el registro nunca se borra.
+export function getActivePresentation(isActive: boolean): ActivePresentation {
+  return isActive
+    ? { label: 'Activo', tone: 'success', symbol: '●' }
+    : { label: 'Inactivo', tone: 'neutral', symbol: '○' };
+}
+
+// E2: el contrato no tiene "versión archivada". Mientras backend responde,
+// solo se permite editar programas activos (la versión vigente).
+export function canEditProgram(program: Pick<TrainingProgram, 'is_active'>): boolean {
+  return program.is_active;
+}
+
+// ---------- Formulario de programa (E1, E2) ----------
+
+export interface ProgramFormValues {
+  knowledge_network_id: string;
+  program_code: string;
+  name: string;
+  training_level: TrainingLevel | '';
+  total_hours: string;
+}
+
+export type ProgramFormErrors = Partial<Record<keyof ProgramFormValues, string>>;
+
+export const EMPTY_PROGRAM_FORM: ProgramFormValues = {
+  knowledge_network_id: '',
+  program_code: '',
+  name: '',
+  training_level: '',
+  total_hours: '',
+};
+
+const isPositiveInteger = (raw: string) => /^\d+$/.test(raw.trim()) && Number(raw) > 0;
+
+export function validateProgramForm(values: ProgramFormValues): ProgramFormErrors {
+  const errors: ProgramFormErrors = {};
+  if (!values.knowledge_network_id) errors.knowledge_network_id = 'Selecciona una red de conocimiento.';
+  if (!values.program_code.trim()) errors.program_code = 'El código del programa es obligatorio.';
+  if (!values.name.trim()) errors.name = 'El nombre es obligatorio.';
+  if (!values.training_level) errors.training_level = 'Selecciona un nivel de formación.';
+  if (!isPositiveInteger(values.total_hours)) errors.total_hours = 'Ingresa las horas como número entero mayor a 0.';
+  return errors;
+}
+
+export function programToFormValues(program: TrainingProgram): ProgramFormValues {
+  return {
+    knowledge_network_id: program.knowledge_network_id,
+    program_code: program.program_code,
+    name: program.name,
+    training_level: isTrainingLevel(program.training_level) ? program.training_level : '',
+    total_hours: String(program.total_hours),
+  };
+}
+
+// Se asume que los valores ya pasaron validateProgramForm.
+export function toProgramCreate(values: ProgramFormValues): TrainingProgramCreate {
+  return {
+    knowledge_network_id: values.knowledge_network_id,
+    program_code: values.program_code.trim(),
+    name: values.name.trim(),
+    training_level: values.training_level as TrainingLevel,
+    total_hours: Number(values.total_hours),
+    is_active: true,
+  };
+}
+
+// E2: editar sube la versión en 1 (nueva definición curricular vigente).
+export function toProgramUpdate(program: TrainingProgram, values: ProgramFormValues): TrainingProgramUpdate {
+  return {
+    knowledge_network_id: values.knowledge_network_id,
+    program_code: values.program_code.trim(),
+    name: values.name.trim(),
+    training_level: values.training_level as TrainingLevel,
+    total_hours: Number(values.total_hours),
+    version: program.version + 1,
+  };
+}
+
+// ---------- Formulario de competencia (E3) ----------
+
+export interface CompetencyFormValues {
+  sena_code: string;
+  name: string;
+  hours: string;
+}
+
+export type CompetencyFormErrors = Partial<Record<keyof CompetencyFormValues, string>>;
+
+export const EMPTY_COMPETENCY_FORM: CompetencyFormValues = { sena_code: '', name: '', hours: '' };
+
+export function validateCompetencyForm(values: CompetencyFormValues): CompetencyFormErrors {
+  const errors: CompetencyFormErrors = {};
+  if (!values.sena_code.trim()) errors.sena_code = 'El código SENA es obligatorio.';
+  if (!values.name.trim()) errors.name = 'El nombre es obligatorio.';
+  if (!isPositiveInteger(values.hours)) errors.hours = 'Ingresa las horas como número entero mayor a 0.';
+  return errors;
+}
+
+export function toCompetencyCreate(values: CompetencyFormValues): CompetencyCreate {
+  return {
+    sena_code: values.sena_code.trim(),
+    name: values.name.trim(),
+    hours: Number(values.hours),
+    is_active: true,
+  };
+}
+
+===== src\main.tsx =====
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import App from './App.js';
+
+const container = document.getElementById('root');
+
+if (container) {
+  createRoot(container).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+}
+
+
+===== src\vite-env.d.ts =====
+/// <reference types="vite/client" />
+
+
+===== tests\apiMock.ts =====
+import { vi } from 'vitest';
+
+import type { TrainingProgramsApi } from '../src/application/ports/TrainingProgramsApi.js';
+import {
+  competenciesPage,
+  competency,
+  knowledgeNetworksPage,
+  outcomesPage,
+  program,
+  programsPage,
+} from './fixturesPrograms.js';
+
+export const createProgramsApi = (overrides: Partial<TrainingProgramsApi> = {}): TrainingProgramsApi => ({
+  list: vi.fn().mockResolvedValue(programsPage),
+  create: vi.fn().mockResolvedValue(program),
+  getById: vi.fn().mockResolvedValue(program),
+  update: vi.fn().mockResolvedValue({ ...program, version: program.version + 1 }),
+  deactivate: vi.fn().mockResolvedValue(undefined),
+  listCompetencies: vi.fn().mockResolvedValue(competenciesPage),
+  createCompetency: vi.fn().mockResolvedValue(competency),
+  listLearningOutcomes: vi.fn().mockResolvedValue(outcomesPage),
+  listKnowledgeNetworks: vi.fn().mockResolvedValue(knowledgeNetworksPage),
+  ...overrides,
+});
+
+===== tests\fixtures.ts =====
+import type { Ficha, FichasPageResult } from '../src/domain/ficha.js';
+
+export const ficha: Ficha = {
+  id: '11111111-1111-4111-8111-111111111111',
+  ficha_number: '2874412',
+  program_id: '22222222-2222-4222-8222-222222222222',
+  program_version: 3,
+  training_center_id: '33333333-3333-4333-8333-333333333333',
+  status: 'EXECUTION',
+  start_date: '2026-01-15',
+  expected_end_date: '2027-12-15',
+  actual_end_date: null,
+  training_shift: 'DAY',
+  training_modality: 'IN_PERSON',
+  max_capacity: 30,
+  created_at: '2026-01-02T10:00:00Z',
+  updated_at: '2026-08-06T14:30:00Z',
+};
+
+export const page: FichasPageResult = {
+  data: [ficha],
+  pagination: { page: 1, page_size: 10, total_items: 1, total_pages: 1 },
+};
+
+
+===== tests\fixturesPrograms.ts =====
+import type {
+  Competency,
+  KnowledgeNetwork,
+  LearningOutcome,
+  Page,
+  TrainingProgram,
+} from '../src/domain/trainingProgram.js';
+
+export const knowledgeNetwork: KnowledgeNetwork = {
+  id: '44444444-4444-4444-8444-444444444444',
+  tech_network_id: '55555555-5555-4555-8555-555555555555',
+  name: 'Informática, diseño y desarrollo de software',
+  code: 'RC-INF',
+  is_active: true,
+  created_at: '2026-01-01T10:00:00Z',
+};
+
+export const program: TrainingProgram = {
+  id: '22222222-2222-4222-8222-222222222222',
+  knowledge_network_id: knowledgeNetwork.id,
+  program_code: '228118',
+  name: 'Análisis y desarrollo de software',
+  training_level: 'TECHNOLOGIST',
+  total_hours: 2640,
+  version: 3,
+  is_active: true,
+  created_at: '2026-01-02T10:00:00Z',
+  updated_at: '2026-08-06T14:30:00Z',
+};
+
+export const inactiveProgram: TrainingProgram = {
+  ...program,
+  id: '66666666-6666-4666-8666-666666666666',
+  program_code: '999001',
+  name: 'Programa dado de baja',
+  is_active: false,
+};
+
+export const competency: Competency = {
+  id: '77777777-7777-4777-8777-777777777777',
+  program_id: program.id,
+  name: 'Desarrollar la solución de software',
+  sena_code: '220501096',
+  hours: 480,
+  is_active: true,
+  created_at: '2026-01-03T10:00:00Z',
+};
+
+export const learningOutcome: LearningOutcome = {
+  id: '88888888-8888-4888-8888-888888888888',
+  competency_id: competency.id,
+  code: '220501096-01',
+  description: 'Codificar los módulos del software según el diseño.',
+  is_active: true,
+  created_at: '2026-01-04T10:00:00Z',
+};
+
+export const pageOf = <T>(data: T[]): Page<T> => ({
+  data,
+  pagination: { page: 1, page_size: 10, total_items: data.length, total_pages: data.length ? 1 : 0 },
+});
+
+export const programsPage = pageOf([program, inactiveProgram]);
+export const competenciesPage = pageOf([competency]);
+export const outcomesPage = pageOf([learningOutcome]);
+export const knowledgeNetworksPage = pageOf([knowledgeNetwork]);
+
+===== tests\integration\ActiveFichasWidget.test.tsx =====
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { ActiveFichasWidget } from '../../src/adapter/in/components/ActiveFichasWidget.js';
+import type { FichasApi } from '../../src/application/ports/FichasApi.js';
+import { ficha } from '../fixtures.js';
+
+describe('ActiveFichasWidget', () => {
+  it('reutiliza el listado con el filtro operativo de fichas activas', async () => {
+    const api: FichasApi = {
+      list: vi.fn().mockResolvedValue({
+        data: [ficha],
+        pagination: { page: 1, page_size: 1, total_items: 12, total_pages: 12 },
+      }),
+      getById: vi.fn(),
+    };
+
+    render(<ActiveFichasWidget api={api} />);
+
+    expect(await screen.findByText('12')).toBeTruthy();
+    await waitFor(() => expect(api.list).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 1, page_size: 1, status: 'EXECUTION' }),
+      expect.any(AbortSignal),
+    ));
+  });
+});
+
+
+===== tests\integration\CurriculumTree.test.tsx =====
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { CurriculumTree } from '../../src/adapter/in/components/CurriculumTree.js';
+import { createProgramsApi } from '../apiMock.js';
+import { competency, learningOutcome, pageOf, program } from '../fixturesPrograms.js';
+
+describe('CurriculumTree', () => {
+  it('E3: lista las competencias del programa sin pedir los RAP todavía', async () => {
+    const api = createProgramsApi();
+    render(<CurriculumTree api={api} program={program} canManage />);
+
+    expect(await screen.findByText(competency.name)).toBeTruthy();
+    expect(screen.getByText(competency.sena_code)).toBeTruthy();
+    expect(screen.getByText('480 h')).toBeTruthy();
+    expect(api.listCompetencies).toHaveBeenCalledWith(program.id, expect.any(Object), expect.any(AbortSignal));
+    expect(api.listLearningOutcomes).not.toHaveBeenCalled();
+  });
+
+  it('E3: crea una competencia en el programa', async () => {
+    const api = createProgramsApi();
+    render(<CurriculumTree api={api} program={program} canManage />);
+    await screen.findByText(competency.name);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva competencia' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nueva competencia' });
+    fireEvent.change(within(dialog).getByLabelText('Código SENA'), { target: { value: '220501097' } });
+    fireEvent.change(within(dialog).getByLabelText('Nombre'), { target: { value: 'Otra competencia' } });
+    fireEvent.change(within(dialog).getByLabelText('Horas'), { target: { value: '120' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar competencia' }));
+
+    await waitFor(() => expect(api.createCompetency).toHaveBeenCalledWith(program.id, {
+      sena_code: '220501097',
+      name: 'Otra competencia',
+      hours: 120,
+      is_active: true,
+    }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('E3: no deja crear competencias en un programa inactivo', async () => {
+    render(<CurriculumTree api={createProgramsApi()} program={{ ...program, is_active: false }} canManage />);
+    await screen.findByText(competency.name);
+
+    expect(screen.getByRole('button', { name: 'Nueva competencia' })).toHaveProperty('disabled', true);
+  });
+
+  it('E4: al expandir una competencia lista sus RAP', async () => {
+    const api = createProgramsApi();
+    render(<CurriculumTree api={api} program={program} canManage />);
+
+    const toggle = await screen.findByRole('button', { name: new RegExp(competency.name) });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+
+    expect(await screen.findByText(learningOutcome.description)).toBeTruthy();
+    expect(screen.getByText(learningOutcome.code)).toBeTruthy();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(api.listLearningOutcomes).toHaveBeenCalledWith(
+      competency.id,
+      expect.objectContaining({ page: 1 }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it('E4: indica cuando la competencia no tiene RAP', async () => {
+    const api = createProgramsApi({ listLearningOutcomes: vi.fn().mockResolvedValue(pageOf([])) });
+    render(<CurriculumTree api={api} program={program} canManage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(competency.name) }));
+
+    expect(await screen.findByText('Esta competencia no tiene resultados de aprendizaje.')).toBeTruthy();
+  });
+
+  it('oculta el botón de crear sin permiso de gestión', async () => {
+    render(<CurriculumTree api={createProgramsApi()} program={program} canManage={false} />);
+    await screen.findByText(competency.name);
+
+    expect(screen.queryByRole('button', { name: 'Nueva competencia' })).toBeNull();
+  });
+});
+
+===== tests\integration\FichasPage.test.tsx =====
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { FichasPage } from '../../src/adapter/in/pages/FichasPage.js';
+import type { FichasApi } from '../../src/application/ports/FichasApi.js';
+import { ficha, page } from '../fixtures.js';
+
+const createApi = (overrides: Partial<FichasApi> = {}): FichasApi => ({
+  list: vi.fn().mockResolvedValue(page),
+  getById: vi.fn().mockResolvedValue(ficha),
+  ...overrides,
+});
+
+describe('FichasPage', () => {
+  it('lista programa, estado, capacidad y paginación', async () => {
+    render(<FichasPage api={createApi()} />);
+
+    expect(await screen.findByText('2874412')).toBeTruthy();
+    expect(screen.getByText(ficha.program_id)).toBeTruthy();
+    expect(screen.getByText('Ejecución', { selector: '[data-known-status="true"]' })).toBeTruthy();
+    expect(screen.getByText('Mostrando 1–1 de 1')).toBeTruthy();
+    expect(screen.getByText('30 aprendices')).toBeTruthy();
+  });
+
+  it('consulta el detalle al abrir una ficha', async () => {
+    const api = createApi();
+    render(<FichasPage api={api} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '2874412' }));
+
+    await waitFor(() => expect(api.getById).toHaveBeenCalledWith(ficha.id, expect.any(AbortSignal)));
+    expect(await screen.findByRole('heading', { name: 'Ficha 2874412' })).toBeTruthy();
+    expect(screen.getByText('Versión cursada')).toBeTruthy();
+  });
+
+  it('muestra un estado vacío explícito', async () => {
+    const api = createApi({
+      list: vi.fn().mockResolvedValue({
+        data: [],
+        pagination: { page: 1, page_size: 10, total_items: 0, total_pages: 0 },
+      }),
+    });
+
+    render(<FichasPage api={api} />);
+
+    expect(await screen.findByText('No hay fichas que coincidan con los filtros')).toBeTruthy();
+  });
+
+  it('envía filtros al servidor sin filtrar la lista en cliente', async () => {
+    const api = createApi();
+    render(<FichasPage api={api} />);
+    await screen.findByText('2874412');
+
+    fireEvent.change(screen.getByLabelText('Programa'), { target: { value: ficha.program_id } });
+    fireEvent.click(screen.getByLabelText('Solo fichas activas'));
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar filtros' }));
+
+    await waitFor(() => expect(api.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ program_id: ficha.program_id, status: 'EXECUTION', page: 1 }),
+      expect.any(AbortSignal),
+    ));
+  });
+});
+
+
+===== tests\integration\ProgramsPage.test.tsx =====
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { ProgramsPage } from '../../src/adapter/in/pages/ProgramsPage.js';
+import { createProgramsApi } from '../apiMock.js';
+import { competency, inactiveProgram, knowledgeNetwork, program } from '../fixturesPrograms.js';
+
+describe('ProgramsPage', () => {
+  it('E1: lista código, nombre, nivel, horas, versión y estado', async () => {
+    render(<ProgramsPage api={createProgramsApi()} />);
+
+    expect(await screen.findByText(program.program_code)).toBeTruthy();
+    expect(screen.getByText(program.name)).toBeTruthy();
+    expect(screen.getAllByText('Tecnólogo').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('v3').length).toBeGreaterThan(0);
+    expect(screen.getByText('2 programas encontrados')).toBeTruthy();
+  });
+
+  it('E1: crea un programa con el cuerpo del contrato', async () => {
+    const api = createProgramsApi();
+    render(<ProgramsPage api={api} />);
+    await screen.findByText(program.program_code);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo programa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nuevo programa' });
+    await within(dialog).findByRole('option', { name: knowledgeNetwork.name });
+
+    fireEvent.change(within(dialog).getByLabelText('Red de conocimiento'), { target: { value: knowledgeNetwork.id } });
+    fireEvent.change(within(dialog).getByLabelText('Código del programa'), { target: { value: '900001' } });
+    fireEvent.change(within(dialog).getByLabelText('Nombre'), { target: { value: 'Programa nuevo' } });
+    fireEvent.change(within(dialog).getByLabelText('Nivel de formación'), { target: { value: 'TECHNICIAN' } });
+    fireEvent.change(within(dialog).getByLabelText('Horas totales'), { target: { value: '1200' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar programa' }));
+
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith({
+      knowledge_network_id: knowledgeNetwork.id,
+      program_code: '900001',
+      name: 'Programa nuevo',
+      training_level: 'TECHNICIAN',
+      total_hours: 1200,
+      is_active: true,
+    }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('E1: no envía el formulario vacío y muestra los errores', async () => {
+    const api = createProgramsApi();
+    render(<ProgramsPage api={api} />);
+    await screen.findByText(program.program_code);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo programa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar programa' }));
+
+    expect(await screen.findByText('El nombre es obligatorio.')).toBeTruthy();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it('E2: muestra la versión vigente y al editar sube la versión en 1', async () => {
+    const api = createProgramsApi();
+    render(<ProgramsPage api={api} />);
+    await screen.findByText(program.program_code);
+
+    fireEvent.click(screen.getByRole('button', { name: `Editar ${program.program_code}` }));
+    const dialog = screen.getByRole('dialog', { name: 'Editar programa' });
+    expect(within(dialog).getByText(/Versión vigente: 3/)).toBeTruthy();
+
+    fireEvent.change(within(dialog).getByLabelText('Nombre'), { target: { value: 'Otro nombre' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar cambios' }));
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith(
+      program.id,
+      expect.objectContaining({ name: 'Otro nombre', version: 4 }),
+    ));
+  });
+
+  it('E2: no permite editar un programa inactivo', async () => {
+    render(<ProgramsPage api={createProgramsApi()} />);
+    await screen.findByText(inactiveProgram.program_code);
+
+    const edit = screen.getByRole('button', { name: `Editar ${inactiveProgram.program_code}` });
+    expect(edit).toHaveProperty('disabled', true);
+  });
+
+  it('E5: da de baja tras confirmar y marca los inactivos', async () => {
+    const api = createProgramsApi();
+    render(<ProgramsPage api={api} />);
+    await screen.findByText(program.program_code);
+
+    expect(screen.getByText('Inactivo')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: `Dar de baja ${program.program_code}` }));
+    expect(api.deactivate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar baja' }));
+
+    await waitFor(() => expect(api.deactivate).toHaveBeenCalledWith(program.id));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('E5: muestra el error del servidor si la baja falla', async () => {
+    const api = createProgramsApi({ deactivate: vi.fn().mockRejectedValue(new Error('No se puede dar de baja.')) });
+    render(<ProgramsPage api={api} />);
+    await screen.findByText(program.program_code);
+
+    fireEvent.click(screen.getByRole('button', { name: `Dar de baja ${program.program_code}` }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar baja' }));
+
+    expect(await screen.findByText('No se puede dar de baja.')).toBeTruthy();
+  });
+
+  it('E5: el filtro de estado se envía al servidor', async () => {
+    const api = createProgramsApi();
+    render(<ProgramsPage api={api} />);
+    await screen.findByText(program.program_code);
+
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ACTIVE' } });
+
+    await waitFor(() => expect(api.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ is_active: true, page: 1 }),
+      expect.any(AbortSignal),
+    ));
+  });
+
+  it('abre el currículo del programa al seleccionarlo', async () => {
+    const api = createProgramsApi();
+    render(<ProgramsPage api={api} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: program.name }));
+
+    expect(await screen.findByText(competency.name)).toBeTruthy();
+    expect(api.listCompetencies).toHaveBeenCalledWith(program.id, expect.any(Object), expect.any(AbortSignal));
+  });
+
+  it('oculta los botones de escritura sin permiso de gestión', async () => {
+    render(<ProgramsPage api={createProgramsApi()} canManage={false} />);
+    await screen.findByText(program.program_code);
+
+    expect(screen.queryByRole('button', { name: 'Nuevo programa' })).toBeNull();
+    expect(screen.queryByRole('button', { name: `Editar ${program.program_code}` })).toBeNull();
+  });
+
+  it('muestra el error de carga con opción de reintentar', async () => {
+    const api = createProgramsApi({ list: vi.fn().mockRejectedValue(new Error('Servicio no disponible.')) });
+    render(<ProgramsPage api={api} />);
+
+    expect(await screen.findByText('Servicio no disponible.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeTruthy();
+  });
+});
+
+===== tests\setup.ts =====
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+afterEach(cleanup);
+
+
+===== tests\unit\FichaStatusBadge.test.tsx =====
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+
+import { FichaStatusBadge } from '../../src/adapter/in/components/FichaStatusBadge.js';
+
+describe('FichaStatusBadge', () => {
+  it('presenta un valor no reconocido como estado desconocido sin romper el render', () => {
+    render(<FichaStatusBadge status="PAUSED_BY_EXTERNAL_SYSTEM" />);
+
+    const badge = screen.getByText('Estado desconocido');
+    expect(badge.getAttribute('data-known-status')).toBe('false');
+    expect(badge.getAttribute('title')).toContain('PAUSED_BY_EXTERNAL_SYSTEM');
+  });
+});
+
+
+===== tests\unit\HttpFichasApi.test.ts =====
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { HttpFichasApi } from '../../src/adapter/out/http/HttpFichasApi.js';
+import { page } from '../fixtures.js';
+
+describe('HttpFichasApi', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('traduce paginación y filtros a query params de GET /fichas', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(page), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new HttpFichasApi('/api/v1/');
+
+    await api.list({ page: 2, page_size: 20, program_id: 'program-1', status: 'EXECUTION' });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain('/api/v1/fichas?');
+    expect(url).toContain('page=2');
+    expect(url).toContain('page_size=20');
+    expect(url).toContain('program_id=program-1');
+    expect(url).toContain('status=EXECUTION');
+  });
+});
+
+
+===== tests\unit\HttpTrainingProgramsApi.test.ts =====
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { HttpTrainingProgramsApi } from '../../src/adapter/out/http/HttpTrainingProgramsApi.js';
+import { competenciesPage, outcomesPage, program, programsPage } from '../fixturesPrograms.js';
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+const stubFetch = (response: Response) => {
+  const fetchMock = vi.fn().mockResolvedValue(response);
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
+describe('HttpTrainingProgramsApi', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('E1: traduce paginación y filtros a query params de GET /training-programs', async () => {
+    const fetchMock = stubFetch(json(programsPage));
+    const api = new HttpTrainingProgramsApi('/api/v1/');
+
+    await api.list({ page: 2, page_size: 20, is_active: true, training_level: 'TECHNICIAN', program_code: '' });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain('/api/v1/training-programs?');
+    expect(url).toContain('page=2');
+    expect(url).toContain('page_size=20');
+    expect(url).toContain('is_active=true');
+    expect(url).toContain('training_level=TECHNICIAN');
+    expect(url).not.toContain('program_code');
+  });
+
+  it('E1: crea con POST y cuerpo JSON', async () => {
+    const fetchMock = stubFetch(json(program, 201));
+    const api = new HttpTrainingProgramsApi();
+    const body = {
+      knowledge_network_id: program.knowledge_network_id,
+      program_code: '1',
+      name: 'N',
+      training_level: 'OPERATOR' as const,
+      total_hours: 10,
+      is_active: true,
+    };
+
+    await expect(api.create(body)).resolves.toEqual(program);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe('/api/v1/training-programs');
+    expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(init.body)).toEqual(body);
+  });
+
+  it('E2: actualiza con PUT /training-programs/{id}', async () => {
+    const fetchMock = stubFetch(json({ ...program, version: 4 }));
+    const api = new HttpTrainingProgramsApi();
+
+    await api.update(program.id, { name: 'Otro', version: 4 });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(`/api/v1/training-programs/${program.id}`);
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body)).toEqual({ name: 'Otro', version: 4 });
+  });
+
+  it('E5: da de baja con DELETE y acepta 204 sin cuerpo', async () => {
+    const fetchMock = stubFetch(new Response(null, { status: 204 }));
+    const api = new HttpTrainingProgramsApi();
+
+    await expect(api.deactivate(program.id)).resolves.toBeUndefined();
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe(`/api/v1/training-programs/${program.id}`);
+    expect(init.method).toBe('DELETE');
+    expect(init.body).toBeUndefined();
+  });
+
+  it('E3: lista y crea competencias bajo el programa', async () => {
+    const fetchMock = stubFetch(json(competenciesPage));
+    const api = new HttpTrainingProgramsApi();
+
+    await api.listCompetencies(program.id, { page: 1, page_size: 50 });
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      `/api/v1/training-programs/${program.id}/competencies?page=1&page_size=50`,
+    );
+
+    fetchMock.mockResolvedValueOnce(json(competenciesPage.data[0], 201));
+    await api.createCompetency(program.id, { name: 'C', sena_code: '1', hours: 10, is_active: true });
+    expect(fetchMock.mock.calls[1][1].method).toBe('POST');
+  });
+
+  it('E4: lista los RAP de una competencia', async () => {
+    const fetchMock = stubFetch(json(outcomesPage));
+    const api = new HttpTrainingProgramsApi();
+
+    await api.listLearningOutcomes('comp-1', { page: 1 });
+
+    expect(String(fetchMock.mock.calls[0][0])).toBe('/api/v1/competencies/comp-1/learning-outcomes?page=1');
+  });
+
+  it('usa el mensaje del contrato cuando la API responde con error', async () => {
+    stubFetch(json({ error: { code: 'CONFLICT', message: 'El código ya existe.' } }, 409));
+    const api = new HttpTrainingProgramsApi();
+
+    await expect(api.deactivate(program.id)).rejects.toThrow('El código ya existe.');
+  });
+
+  it('usa un mensaje genérico si el error no trae cuerpo JSON', async () => {
+    stubFetch(new Response('boom', { status: 500 }));
+    const api = new HttpTrainingProgramsApi();
+
+    await expect(api.list({})).rejects.toThrow('HTTP 500');
+  });
+});
+
+===== tests\unit\trainingProgram.test.ts =====
+import { describe, expect, it } from 'vitest';
+
+import {
+  EMPTY_COMPETENCY_FORM,
+  EMPTY_PROGRAM_FORM,
+  canEditProgram,
+  getActivePresentation,
+  getTrainingLevelLabel,
+  programToFormValues,
+  toCompetencyCreate,
+  toProgramCreate,
+  toProgramUpdate,
+  validateCompetencyForm,
+  validateProgramForm,
+} from '../../src/domain/trainingProgram.js';
+import { inactiveProgram, program } from '../fixturesPrograms.js';
+
+describe('trainingProgram (dominio)', () => {
+  it('etiqueta los niveles y tolera uno desconocido', () => {
+    expect(getTrainingLevelLabel('TECHNOLOGIST')).toBe('Tecnólogo');
+    expect(getTrainingLevelLabel('NUEVO')).toBe('Nivel desconocido');
+  });
+
+  it('E5: presenta activo e inactivo', () => {
+    expect(getActivePresentation(true).label).toBe('Activo');
+    expect(getActivePresentation(false).label).toBe('Inactivo');
+  });
+
+  it('E2: solo permite editar programas activos', () => {
+    expect(canEditProgram(program)).toBe(true);
+    expect(canEditProgram(inactiveProgram)).toBe(false);
+  });
+
+  it('E1: valida el formulario vacío y uno completo', () => {
+    expect(Object.keys(validateProgramForm(EMPTY_PROGRAM_FORM)).sort()).toEqual([
+      'knowledge_network_id',
+      'name',
+      'program_code',
+      'total_hours',
+      'training_level',
+    ]);
+    expect(validateProgramForm(programToFormValues(program))).toEqual({});
+  });
+
+  it('E1: rechaza horas que no son enteros positivos', () => {
+    const base = programToFormValues(program);
+    expect(validateProgramForm({ ...base, total_hours: '0' }).total_hours).toBeDefined();
+    expect(validateProgramForm({ ...base, total_hours: '12.5' }).total_hours).toBeDefined();
+    expect(validateProgramForm({ ...base, total_hours: 'abc' }).total_hours).toBeDefined();
+  });
+
+  it('E1: arma el cuerpo de creación activo', () => {
+    const body = toProgramCreate({ ...programToFormValues(program), name: '  Nuevo  ' });
+    expect(body).toMatchObject({ name: 'Nuevo', total_hours: 2640, is_active: true });
+  });
+
+  it('E2: editar sube la versión en 1', () => {
+    expect(toProgramUpdate(program, programToFormValues(program)).version).toBe(program.version + 1);
+  });
+
+  it('E3: valida y arma la competencia', () => {
+    expect(Object.keys(validateCompetencyForm(EMPTY_COMPETENCY_FORM))).toHaveLength(3);
+    expect(toCompetencyCreate({ sena_code: ' 1 ', name: 'X', hours: '40' })).toEqual({
+      sena_code: '1',
+      name: 'X',
+      hours: 40,
+      is_active: true,
+    });
+  });
+});

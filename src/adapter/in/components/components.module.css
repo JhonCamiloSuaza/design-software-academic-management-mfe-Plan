@@ -1,0 +1,81 @@
+/* Estilos de los componentes de programas (HU-ACAD-17).
+   Valores de 12-ux-ui/mockup-ddd/design-tokens.md y mockups/app/assets/tokens.css.
+   Se usan var(--token, valor) para tomar los tokens compartidos del design-system
+   cuando existan y caer al valor documentado cuando el MFE corre solo. */
+
+.badge { display: inline-flex; align-items: center; gap: var(--space-1, 4px); padding: 2px var(--space-3, 12px); border-radius: 999px; font-size: var(--font-size-xs, 12px); font-weight: var(--font-weight-bold, 700); white-space: nowrap; }
+.badge-success { background: var(--color-success-surface, #ecfdf3); color: var(--color-success, #067647); }
+.badge-neutral { background: var(--color-surface-muted, #f2f4f7); color: var(--color-text-muted, #475467); }
+.badge-warning { background: var(--color-warning-surface, #fffaeb); color: var(--color-warning, #93370d); }
+.badge-danger { background: var(--color-danger-surface, #fef3f2); color: var(--color-danger, #b42318); }
+.badge-info { background: var(--color-info-surface, #eff8ff); color: var(--color-info, #175cd3); }
+
+.primaryButton, .secondaryButton, .dangerButton { min-height: 36px; padding: var(--space-2, 8px) var(--space-4, 16px); border-radius: var(--radius-sm, 6px); border: 1px solid transparent; font: inherit; font-size: var(--font-size-sm, 14px); font-weight: var(--font-weight-bold, 700); cursor: pointer; }
+.primaryButton { background: var(--color-brand, #007832); color: #fff; }
+.primaryButton:hover:not(:disabled) { background: var(--color-brand-hover, #00652b); }
+.secondaryButton { background: var(--color-surface, #fff); color: var(--color-text, #101828); border-color: #667085; }
+.secondaryButton:hover:not(:disabled) { border-color: var(--color-brand, #007832); color: var(--color-brand, #007832); }
+.dangerButton { background: var(--color-surface, #fff); color: var(--color-danger, #b42318); border-color: var(--color-danger, #b42318); }
+.dangerButton:hover:not(:disabled) { background: var(--color-danger-surface, #fef3f2); }
+.primaryButton:disabled, .secondaryButton:disabled, .dangerButton:disabled { opacity: .5; cursor: not-allowed; }
+.linkButton { background: none; border: 0; padding: 0; color: var(--color-brand, #007832); font: inherit; font-weight: var(--font-weight-bold, 700); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+.primaryButton:focus-visible, .secondaryButton:focus-visible, .dangerButton:focus-visible, .linkButton:focus-visible { outline: 3px solid var(--color-brand, #007832); outline-offset: 2px; }
+.dangerButton:focus-visible { outline-color: var(--color-danger, #b42318); }
+.competencyToggle:focus-visible { outline: 3px solid var(--color-brand, #007832); outline-offset: -3px; }
+
+.tableWrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm, 14px); }
+.table th { text-align: left; padding: var(--space-3, 12px) var(--space-2, 8px); border-bottom: 2px solid var(--color-border, #eaecf0); color: var(--color-text-muted, #475467); font-size: var(--font-size-xs, 12px); text-transform: uppercase; letter-spacing: .03em; }
+.table td { padding: var(--space-3, 12px) var(--space-2, 8px); border-bottom: 1px solid var(--color-border, #eaecf0); vertical-align: middle; }
+.table tr[data-selected="true"] { background: var(--color-brand-soft, #ecf7f0); box-shadow: inset 3px 0 0 var(--color-brand, #007832); }
+.rowActions { display: flex; gap: var(--space-2, 8px); flex-wrap: wrap; }
+
+.backdrop { position: fixed; inset: 0; background: rgba(16, 24, 40, .5); display: grid; place-items: center; z-index: var(--z-modal, 1020); padding: var(--space-4, 16px); }
+.dialog { background: var(--color-surface, #fff); color: var(--color-text, #101828); border-radius: var(--radius-lg, 16px); width: min(520px, 100%); max-height: 90vh; overflow: auto; padding: var(--space-5, 24px); box-shadow: var(--shadow-md, 0 4px 8px rgba(16, 24, 40, .08)), 0 12px 32px rgba(16, 24, 40, .2); }
+.dialog:focus { outline: none; }
+.dialog h2 { margin: 0 0 var(--space-2, 8px); font-size: var(--font-size-xl, 20px); line-height: var(--line-height-tight, 1.25); }
+.form { display: grid; gap: var(--space-4, 16px); margin-top: var(--space-3, 12px); }
+.field { display: grid; gap: var(--space-1, 4px); font-weight: var(--font-weight-bold, 700); font-size: var(--font-size-sm, 14px); }
+.field input, .field select { min-height: 40px; padding: var(--space-2, 8px) var(--space-3, 12px); border: 1px solid #667085; border-radius: var(--radius-sm, 6px); font: inherit; font-weight: var(--font-weight-regular, 400); background: var(--color-surface, #fff); color: var(--color-text, #101828); }
+.field input:focus-visible, .field select:focus-visible { outline: 3px solid var(--color-brand, #007832); outline-offset: 1px; border-color: var(--color-brand, #007832); }
+.field input[aria-invalid="true"], .field select[aria-invalid="true"] { border-color: var(--color-danger, #b42318); }
+.fieldError { color: var(--color-danger, #b42318); font-size: var(--font-size-xs, 12px); font-weight: var(--font-weight-regular, 400); }
+.actions { display: flex; justify-content: flex-end; gap: var(--space-2, 8px); margin-top: var(--space-2, 8px); }
+.errorBox { background: var(--color-danger-surface, #fef3f2); color: var(--color-danger, #b42318); border-radius: var(--radius-sm, 6px); padding: var(--space-3, 12px) var(--space-4, 16px); }
+.errorBox p { margin: var(--space-1, 4px) 0 var(--space-2, 8px); }
+.hint { background: var(--color-info-surface, #eff8ff); color: var(--color-info, #175cd3); border-radius: var(--radius-sm, 6px); padding: var(--space-2, 8px) var(--space-3, 12px); margin: 0; font-size: var(--font-size-sm, 14px); }
+.muted { color: var(--color-text-muted, #475467); margin: 0; font-size: var(--font-size-sm, 14px); }
+
+.tree { background: var(--color-surface, #fff); border-radius: var(--radius-md, 10px); padding: var(--space-5, 24px); box-shadow: var(--shadow-sm, 0 1px 2px rgba(16, 24, 40, .06)); border: 1px solid var(--color-border, #eaecf0); display: grid; gap: var(--space-4, 16px); }
+.treeHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4, 16px); flex-wrap: wrap; }
+.treeHeader h2 { margin: 0 0 var(--space-1, 4px); font-size: var(--font-size-lg, 18px); }
+.competencyList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2, 8px); }
+.competencyItem { border: 1px solid var(--color-border, #eaecf0); border-radius: var(--radius-md, 10px); overflow: hidden; }
+.competencyToggle { width: 100%; min-height: 44px; display: flex; align-items: center; gap: var(--space-3, 12px); padding: var(--space-3, 12px) var(--space-4, 16px); background: var(--color-surface-muted, #f2f4f7); color: var(--color-text, #101828); border: 0; font: inherit; font-size: var(--font-size-sm, 14px); text-align: left; cursor: pointer; }
+.competencyName { flex: 1; font-weight: var(--font-weight-bold, 700); }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--font-size-sm, 14px); color: var(--color-brand, #007832); }
+.outcomesPanel { padding: var(--space-3, 12px) var(--space-4, 16px) var(--space-4, 16px) var(--space-6, 32px); border-top: 1px solid var(--color-border, #eaecf0); }
+.outcomes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2, 8px); }
+.outcomeItem { display: flex; gap: var(--space-3, 12px); align-items: baseline; flex-wrap: wrap; font-size: var(--font-size-sm, 14px); }
+
+/* Tablet: objetivos tactiles >= 44 px (design-tokens.md, Responsive). */
+@media (max-width: 1024px) {
+  .primaryButton, .secondaryButton, .dangerButton { min-height: 44px; }
+  .field input, .field select { min-height: 44px; }
+}
+
+/* Mobile < 768 px: tabla -> tarjetas, 1 columna (design-tokens.md, Responsive). */
+@media (max-width: 767px) {
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table, .table tbody, .table tr, .table td { display: block; }
+  .table tr { padding: var(--space-3, 12px) 0; border-bottom: 1px solid var(--color-border, #eaecf0); }
+  .table td { display: grid; grid-template-columns: 40% 1fr; gap: var(--space-2, 8px); padding: var(--space-1, 4px) var(--space-2, 8px); border: 0; }
+  .table td::before { content: attr(data-label); color: var(--color-text-muted, #475467); font-size: var(--font-size-xs, 12px); font-weight: var(--font-weight-bold, 700); text-transform: uppercase; }
+  .dialog { padding: var(--space-4, 16px); }
+  .actions { flex-wrap: wrap; }
+  .actions > * { flex: 1 1 auto; }
+  .treeHeader > button { width: 100%; }
+  .competencyToggle { flex-wrap: wrap; }
+  .outcomesPanel { padding-left: var(--space-4, 16px); }
+}
