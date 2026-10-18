@@ -13,9 +13,11 @@ interface ContractPage {
 
 export class HttpFichasApi implements FichasApi {
   private readonly baseUrl: string;
+  private readonly accessToken?: string;
 
-  constructor(baseUrl = '/api/v1') {
+  constructor(baseUrl = '/api/v1', accessToken?: string) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.accessToken = accessToken;
   }
 
   async list(query: ListFichasQuery, signal?: AbortSignal): Promise<FichasPageResult> {
@@ -27,7 +29,7 @@ export class HttpFichasApi implements FichasApi {
 
     const response = await fetch(`${this.baseUrl}/fichas?${params.toString()}`, {
       credentials: 'include',
-      headers: { Accept: 'application/json' },
+      headers: this.headers(),
       signal,
     });
 
@@ -37,7 +39,7 @@ export class HttpFichasApi implements FichasApi {
   async getById(id: string, signal?: AbortSignal): Promise<Ficha> {
     const response = await fetch(`${this.baseUrl}/fichas/${encodeURIComponent(id)}`, {
       credentials: 'include',
-      headers: { Accept: 'application/json' },
+      headers: this.headers(),
       signal,
     });
 
@@ -50,5 +52,11 @@ export class HttpFichasApi implements FichasApi {
     }
 
     return response.json() as Promise<T>;
+  }
+
+  private headers(): Record<string, string> {
+    return this.accessToken
+      ? { Accept: 'application/json', Authorization: `Bearer ${this.accessToken}` }
+      : { Accept: 'application/json' };
   }
 }
