@@ -1,0 +1,5 @@
+node_modules
+dist
+.git
+.mf
+vite-academic-mfe.log

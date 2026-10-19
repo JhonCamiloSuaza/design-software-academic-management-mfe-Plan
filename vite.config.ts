@@ -27,7 +27,11 @@ export default defineConfig({
     port: 5103,
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:8003',
+        // Browser code always uses the relative /api/v1 path.  This target is
+        // only used by Vite's development server, so Docker can point it at
+        // the academic API service without leaking an internal hostname to
+        // the browser.
+        target: process.env.ACADEMIC_API_PROXY_TARGET ?? 'http://localhost:8003',
         changeOrigin: true,
       },
     },
